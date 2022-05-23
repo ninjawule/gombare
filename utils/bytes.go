@@ -1,10 +1,9 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/sbabiv/xml2map"
 )
@@ -17,9 +16,19 @@ import (
 func CompareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) (Comparison, error) {
 	// if the XML option is activated, we compare 2 XML files
 	if isXml {
-		log.Print(xml2map.ErrInvalidDocument.Error())
+		// handling the XML unmarshalling
+		map1, err1 := xml2map.NewDecoder(bytes.NewReader(bytes1)).Decode()
+		if err1 != nil {
+			return nil, fmt.Errorf("Error while unmarshalling the first data set. Cause: %s", err1)
+		}
 
-		return nil, errors.New("XML is not handled yet!")
+		map2, err2 := xml2map.NewDecoder(bytes.NewReader(bytes2)).Decode()
+		if err2 != nil {
+			return nil, fmt.Errorf("Error while unmarshalling the second data set. Cause: %s", err2)
+		}
+
+		// using the right comparison function, between 2 objects in general
+		return compareMaps("", map1, map2, idProps)
 	}
 
 	// handling the JSON unmarshalling
@@ -30,7 +39,7 @@ func CompareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) 
 
 	var obj2 interface{}
 	if errUnmarsh2 := json.Unmarshal(bytes2, &obj2); errUnmarsh2 != nil {
-		return nil, fmt.Errorf("Error while unmarshalling the first data set. Cause: %s", errUnmarsh2)
+		return nil, fmt.Errorf("Error while unmarshalling the second data set. Cause: %s", errUnmarsh2)
 	}
 
 	// using the right comparison function, between 2 objects in general

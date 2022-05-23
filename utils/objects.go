@@ -43,19 +43,28 @@ func compareObjects(currentPath string, obj1, obj2 interface{}, idProps map[stri
 		if obj1.(bool) != obj2.(bool) {
 			return one_two(obj1, obj2), nil
 		}
+
 	case reflect.Float64:
 		if obj1.(float64) != obj2.(float64) {
 			return one_two(obj1, obj2), nil
 		}
+
 	case reflect.String:
 		if obj1.(string) != obj2.(string) {
 			return one_two(obj1, obj2), nil
 		}
+
 	case reflect.Slice:
-		return compareSlices(currentPath, obj1.([]interface{}), obj2.([]interface{}), idProps)
+		switch obj1.(type) {
+		case []interface{}:
+			return compareSlicesOfObjects(currentPath, obj1.([]interface{}), obj2.([]interface{}), idProps)
+		case []map[string]interface{}:
+			return compareSlicesOfMaps(currentPath, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), idProps)
+		}
 
 	case reflect.Map:
 		return compareMaps(currentPath, obj1.(map[string]interface{}), obj2.(map[string]interface{}), idProps)
+
 	default:
 		// this should never happen
 		return nil, fmt.Errorf("Issue at path '%s' : type '%s' is not handled", currentPath, obj1Kind)

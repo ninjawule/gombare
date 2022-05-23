@@ -20,8 +20,15 @@ func compareMaps(currentPath string, map1, map2 map[string]interface{}, idProps 
 		// what's in the 2nd map ?
 		obj2 := map2[key1]
 
+		// what's the next path ? this map's key from the current path
+		nextPath := currentPath + ">" + key1
+		if idProp := idProps[currentPath]; idProp != "" {
+			// except when this map has been built from a slice, with an ID as a key
+			nextPath = currentPath + ">" + idProp
+		}
+
 		// obj1 and obj2 should be compared
-		compObj1Obj2, errComp := compareObjects(currentPath+">"+key1, obj1, obj2, idProps)
+		compObj1Obj2, errComp := compareObjects(nextPath, obj1, obj2, idProps)
 		if errComp != nil {
 			return nil, errComp
 		}
@@ -36,8 +43,15 @@ func compareMaps(currentPath string, map1, map2 map[string]interface{}, idProps 
 	for key2 := range map2 {
 		// we're considering keys that have not been checked yet
 		if !checked[key2] {
+			// what's the next path ? this map's key from the current path
+			nextPath := currentPath + ">" + key2
+			if idProp := idProps[currentPath]; idProp != "" {
+				// except when this map has been built from a slice, with an ID as a key
+				nextPath = currentPath + ">" + idProp
+			}
+
 			// at this point, obj1 does not exist for this key...
-			compObj1Obj2, errComp := compareObjects(currentPath+">"+key2, map1[key2], map2[key2], idProps)
+			compObj1Obj2, errComp := compareObjects(nextPath, map1[key2], map2[key2], idProps)
 			if errComp != nil {
 				return nil, errComp
 			}

@@ -8,16 +8,10 @@ import (
 
 //------------------------------------------------------------------------------
 // Here we compare slices, which is the more problematic case,
-// since we need ordering
+// since we need ordering - general slice case here
 //------------------------------------------------------------------------------
 
-func compareSlices(currentPath string, slice1, slice2 []interface{}, idProps map[string]string) (Comparison, error) {
-	defer func() {
-		if err := recover(); err != nil {
-			panic(fmt.Errorf("Could not compare the 2 slices at path '%s': %s", currentPath, err))
-		}
-	}()
-
+func compareSlicesOfObjects(currentPath string, slice1, slice2 []interface{}, idProps map[string]string) (Comparison, error) {
 	// handling empty
 	slice1Empty := len(slice1) == 0
 	slice2Empty := len(slice2) == 0
@@ -45,15 +39,15 @@ func compareSlices(currentPath string, slice1, slice2 []interface{}, idProps map
 		return nil, fmt.Errorf("Issue at path '%s' : type '%s' in the first file VS type '%s' in the second file", currentPath, slice1Kind, slice2Kind)
 	}
 
-	// transforming the slices to
-	map1 := sliceToMap(currentPath, slice1Kind, slice1, idProps)
-	map2 := sliceToMap(currentPath, slice2Kind, slice2, idProps)
+	// transforming the slices to maps, to allow for map comparison
+	map1 := sliceToMapOfObjects(currentPath, slice1Kind, slice1, idProps)
+	map2 := sliceToMapOfObjects(currentPath, slice2Kind, slice2, idProps)
 
 	// we know how to deal with maps
 	return compareMaps(currentPath, map1, map2, idProps)
 }
 
-func sliceToMap(currentPath string, sliceKind reflect.Kind, slice []interface{}, idProps map[string]string) map[string]interface{} {
+func sliceToMapOfObjects(currentPath string, sliceKind reflect.Kind, slice []interface{}, idProps map[string]string) map[string]interface{} {
 	result := map[string]interface{}{}
 
 	switch sliceKind {
@@ -98,6 +92,66 @@ func sliceToMap(currentPath string, sliceKind reflect.Kind, slice []interface{},
 	default:
 		// this should never happen
 		panic(fmt.Errorf("Cannot sort a slice of %ss yet!", sliceKind))
+	}
+
+	return result
+}
+
+//------------------------------------------------------------------------------
+// Here we specifically compare slices of maps
+//------------------------------------------------------------------------------
+
+func compareSlicesOfMaps(currentPath string, slice1, slice2 []map[string]interface{}, idProps map[string]string) (Comparison, error) {
+	// handling empty
+	slice1Empty := len(slice1) == 0
+	slice2Empty := len(slice2) == 0
+
+	// one is empty and not this other ?
+	if slice1Empty != slice2Empty {
+		if slice1Empty {
+			return two(slice2), nil
+		}
+
+		return one(slice1), nil
+	}
+
+	// both are empty ?
+	if slice1Empty {
+		return nodif(), nil
+	}
+
+	// mapping all the maps
+	map1 := sliceToMapOfMaps(currentPath, slice1, idProps)
+	map2 := sliceToMapOfMaps(currentPath, slice2, idProps)
+
+	// we know how to deal with maps
+	return compareMaps(currentPath, map1, map2, idProps)
+}
+
+func sliceToMapOfMaps(currentPath string, slice []map[string]interface{}, idProps map[string]string) map[string]interface{} {
+	result := map[string]interface{}{}
+
+	// controlling that we have an ID to identify the objects in the map
+	idProp := idProps[currentPath]
+	if idProp == "" {
+		panic(fmt.Sprintf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath))
+	}
+
+	// we build the map depending on the objects' IDs' type
+	switch idKind := reflect.ValueOf(slice[0][idProp]).Kind(); idKind {
+	case reflect.Float64:
+		for _, mapInSlice := range slice {
+			//nolint:revive, gomnd
+			result[strconv.FormatFloat(mapInSlice[idProp].(float64), 'f', 6, 64)] = mapInSlice
+		}
+
+	case reflect.String:
+		for _, mapInSlice := range slice {
+			result[mapInSlice[idProp].(string)] = mapInSlice
+		}
+
+	default:
+		panic(fmt.Sprintf("The property '%s', which is of type '%s', cannot serve as an ID for the objects at path '%s'", idProp, idKind, currentPath))
 	}
 
 	return result
