@@ -11,6 +11,10 @@ func (comp Comparison) hasDiffs() bool {
 	return len(comp) > 0
 }
 
+func nodif() Comparison {
+	return Comparison{}
+}
+
 func one(obj interface{}) Comparison {
 	return map[string]interface{}{"one": obj}
 }

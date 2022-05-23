@@ -5,7 +5,7 @@ package utils
 //------------------------------------------------------------------------------
 
 // compareMaps : getting a diff between 2 maps
-func compareMaps(currentPath string, map1, map2 map[string]interface{}) (Comparison, error) {
+func compareMaps(currentPath string, map1, map2 map[string]interface{}, idProps map[string]string) (Comparison, error) {
 	// the result from comparing the 2 maps
 	thisComparison := map[string]interface{}{}
 
@@ -21,7 +21,7 @@ func compareMaps(currentPath string, map1, map2 map[string]interface{}) (Compari
 		obj2 := map2[key1]
 
 		// obj1 and obj2 should be compared
-		compObj1Obj2, errComp := compareObjects(currentPath+">"+key1, obj1, obj2)
+		compObj1Obj2, errComp := compareObjects(currentPath+">"+key1, obj1, obj2, idProps)
 		if errComp != nil {
 			return nil, errComp
 		}
@@ -37,7 +37,7 @@ func compareMaps(currentPath string, map1, map2 map[string]interface{}) (Compari
 		// we're considering keys that have not been checked yet
 		if !checked[key2] {
 			// at this point, obj1 does not exist for this key...
-			compObj1Obj2, errComp := compareObjects(currentPath+">"+key2, map1[key2], map2[key2])
+			compObj1Obj2, errComp := compareObjects(currentPath+">"+key2, map1[key2], map2[key2], idProps)
 			if errComp != nil {
 				return nil, errComp
 			}

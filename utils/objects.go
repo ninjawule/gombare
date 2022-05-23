@@ -10,7 +10,7 @@ import (
 //------------------------------------------------------------------------------
 
 // compareObjects : comparing 2 objects in general - they can be maps, slices, or simple types
-func compareObjects(currentPath string, obj1, obj2 interface{}) (Comparison, error) {
+func compareObjects(currentPath string, obj1, obj2 interface{}, idProps map[string]string) (Comparison, error) {
 	// considering the kind for the two objects to compare
 	obj1Kind := reflect.ValueOf(obj1).Kind()
 	obj2Kind := reflect.ValueOf(obj2).Kind()
@@ -29,7 +29,7 @@ func compareObjects(currentPath string, obj1, obj2 interface{}) (Comparison, err
 
 	if obj1Nil {
 		// then both objects are nil - we still return a void comparison to avoid nil exceptions
-		return Comparison{}, nil
+		return nodif(), nil
 	}
 
 	// if the kinds are not equal, then we signal an error
@@ -52,15 +52,15 @@ func compareObjects(currentPath string, obj1, obj2 interface{}) (Comparison, err
 			return one_two(obj1, obj2), nil
 		}
 	case reflect.Slice:
-		return compareSlices(currentPath, obj1.([]interface{}), obj2.([]interface{}))
+		return compareSlices(currentPath, obj1.([]interface{}), obj2.([]interface{}), idProps)
 
 	case reflect.Map:
-		return compareMaps(currentPath, obj1.(map[string]interface{}), obj2.(map[string]interface{}))
+		return compareMaps(currentPath, obj1.(map[string]interface{}), obj2.(map[string]interface{}), idProps)
 	default:
 		// this should never happen
 		return nil, fmt.Errorf("Issue at path '%s' : type '%s' is not handled", currentPath, obj1Kind)
 	}
 
 	// we still return a void comparison to avoid nil exceptions
-	return Comparison{}, nil
+	return nodif(), nil
 }

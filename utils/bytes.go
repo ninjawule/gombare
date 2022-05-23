@@ -14,7 +14,7 @@ import (
 //------------------------------------------------------------------------------
 
 // CompareBytes : comparing 2 slices of bytes containing the data for JSON or XML files
-func CompareBytes(bytes1, bytes2 []byte, isXml bool) (Comparison, error) {
+func CompareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) (Comparison, error) {
 	// if the XML option is activated, we compare 2 XML files
 	if isXml {
 		log.Print(xml2map.ErrInvalidDocument.Error())
@@ -34,5 +34,5 @@ func CompareBytes(bytes1, bytes2 []byte, isXml bool) (Comparison, error) {
 	}
 
 	// using the right comparison function, between 2 objects in general
-	return compareObjects("", obj1, obj2)
+	return compareObjects("", obj1, obj2, idProps)
 }
