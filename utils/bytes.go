@@ -12,8 +12,8 @@ import (
 // Here we compare slices of bytes
 //------------------------------------------------------------------------------
 
-// CompareBytes : comparing 2 slices of bytes containing the data for JSON or XML files
-func CompareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) (Comparison, error) {
+// compareBytes : comparing 2 slices of bytes containing the data for JSON or XML files
+func compareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) (Comparison, error) {
 	// if the XML option is activated, we compare 2 XML files
 	if isXml {
 		// handling the XML unmarshalling
