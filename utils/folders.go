@@ -58,6 +58,7 @@ func CompareFolders(pathOne, pathTwo string, xml bool, idProps map[string]string
 	return thisComparison, nil
 }
 
+// returns a directory's list of files as a map
 func listFilesToMap(path string) map[string]bool {
 	// we'll use the filenames as keys
 	result := map[string]bool{}

@@ -76,8 +76,14 @@ func sliceToMapOfObjects(currentPath string, sliceKind reflect.Kind, slice []int
 		switch idKind := reflect.ValueOf(slice[0].(map[string]interface{})[idProp]).Kind(); idKind {
 		case reflect.Float64:
 			for _, object := range slice {
-				//nolint:revive, gomnd
-				result[strconv.FormatFloat((object.(map[string]interface{}))[idProp].(float64), 'f', 6, 64)] = object
+				//nolint:errcheck
+				floatID := (object.(map[string]interface{}))[idProp].(float64)
+				if floatID == float64(int(floatID)) {
+					result[strconv.Itoa(int(floatID))] = object
+				} else {
+					//nolint:revive, gomnd
+					result[strconv.FormatFloat(floatID, 'f', 6, 64)] = object
+				}
 			}
 
 		case reflect.String:
