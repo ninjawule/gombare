@@ -150,7 +150,12 @@ func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) string {
 				//nolint:errcheck
 				currentObj = value.(map[string]interface{})
 			default:
-				panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s)", value, path, thisProp.toFullString()))
+				// if we have a nil value at the intended path, we still use it
+				if value == nil {
+					valuesForObj = append(valuesForObj, "*empty*")
+				} else {
+					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s)", value, path, thisProp.toFullString()))
+				}
 			}
 		}
 	}
