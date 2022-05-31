@@ -13,9 +13,9 @@ import (
 //------------------------------------------------------------------------------
 
 // compareBytes : comparing 2 slices of bytes containing the data for JSON or XML files
-func compareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) (Comparison, error) {
+func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions) (Comparison, error) {
 	// if the XML option is activated, we compare 2 XML files
-	if isXml {
+	if options.GetFileType() == FileTypeXML {
 		// handling the XML unmarshalling
 		map1, err1 := xml2map.NewDecoder(bytes.NewReader(bytes1)).Decode()
 		if err1 != nil {
@@ -28,7 +28,7 @@ func compareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) 
 		}
 
 		// using the right comparison function, between 2 objects in general
-		return compareMaps("", map1, map2, idProps)
+		return compareMaps("", map1, map2, options, false)
 	}
 
 	// handling the JSON unmarshalling
@@ -43,5 +43,5 @@ func compareBytes(bytes1, bytes2 []byte, isXml bool, idProps map[string]string) 
 	}
 
 	// using the right comparison function, between 2 objects in general
-	return compareObjects("", obj1, obj2, idProps)
+	return compareObjects("", obj1, obj2, options)
 }

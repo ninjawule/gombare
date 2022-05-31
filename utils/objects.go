@@ -10,7 +10,8 @@ import (
 //------------------------------------------------------------------------------
 
 // compareObjects : comparing 2 objects in general - they can be maps, slices, or simple types
-func compareObjects(currentPath string, obj1, obj2 interface{}, idProps map[string]string) (Comparison, error) {
+//nolint:cyclop
+func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *ComparisonOptions) (Comparison, error) {
 	// considering the kind for the two objects to compare
 	obj1Kind := reflect.ValueOf(obj1).Kind()
 	obj2Kind := reflect.ValueOf(obj2).Kind()
@@ -57,13 +58,13 @@ func compareObjects(currentPath string, obj1, obj2 interface{}, idProps map[stri
 	case reflect.Slice:
 		switch obj1.(type) {
 		case []interface{}:
-			return compareSlicesOfObjects(currentPath, obj1.([]interface{}), obj2.([]interface{}), idProps)
+			return compareSlicesOfObjects(currentPath, obj1.([]interface{}), obj2.([]interface{}), options)
 		case []map[string]interface{}:
-			return compareSlicesOfMaps(currentPath, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), idProps)
+			return compareSlicesOfMaps(currentPath, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options)
 		}
 
 	case reflect.Map:
-		return compareMaps(currentPath, obj1.(map[string]interface{}), obj2.(map[string]interface{}), idProps)
+		return compareMaps(currentPath, obj1.(map[string]interface{}), obj2.(map[string]interface{}), options, false)
 
 	default:
 		// this should never happen

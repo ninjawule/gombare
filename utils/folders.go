@@ -11,7 +11,7 @@ import (
 //------------------------------------------------------------------------------
 
 // CompareFolders : getting a diff between 2 files, JSON or XML (for now)
-func CompareFolders(pathOne, pathTwo string, xml bool, idProps map[string]string) (Comparison, error) {
+func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Comparison, error) {
 	// the result from comparing the 2 folders
 	thisComparison := map[string]interface{}{}
 
@@ -34,7 +34,7 @@ func CompareFolders(pathOne, pathTwo string, xml bool, idProps map[string]string
 
 		} else {
 			// yes, the file exists, so we can compare the 2 files
-			compFile1File2, errComp := CompareFiles(path.Join(pathOne, fileName1), path.Join(pathTwo, fileName1), xml, idProps)
+			compFile1File2, errComp := CompareFiles(path.Join(pathOne, fileName1), path.Join(pathTwo, fileName1), options)
 			if errComp != nil {
 				return nil, errComp
 			}

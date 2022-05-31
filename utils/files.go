@@ -10,18 +10,18 @@ import (
 //------------------------------------------------------------------------------
 
 // CompareFiles : getting a diff between 2 files, JSON or XML (for now)
-func CompareFiles(pathOne, pathTwo string, xml bool, idProps map[string]string) (Comparison, error) {
+func CompareFiles(filepathOne, filepathTwo string, options *ComparisonOptions) (Comparison, error) {
 	// reading the files
-	oneBytes, errOne := os.ReadFile(pathOne)
+	oneBytes, errOne := os.ReadFile(filepathOne)
 	if errOne != nil {
-		panic(fmt.Sprintf("Error while readling file one (%s). Cause: %s", pathOne, errOne))
+		panic(fmt.Sprintf("Error while readling file one (%s). Cause: %s", filepathOne, errOne))
 	}
 
-	twoBytes, errTwo := os.ReadFile(pathTwo)
+	twoBytes, errTwo := os.ReadFile(filepathTwo)
 	if errTwo != nil {
-		panic(fmt.Sprintf("Error while readling file two (%s). Cause: %s", pathTwo, errTwo))
+		panic(fmt.Sprintf("Error while readling file two (%s). Cause: %s", filepathTwo, errTwo))
 	}
 
 	// doing the comparison
-	return compareBytes(oneBytes, twoBytes, xml, idProps)
+	return compareBytes(oneBytes, twoBytes, options)
 }
