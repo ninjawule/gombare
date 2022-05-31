@@ -57,7 +57,7 @@ func (thisPath PropPath) To(key string) PropPath {
 }
 
 func (thisPath PropPath) With(idProp *IDProp) PropPath {
-	return PropPath(string(thisPath) + ">" + idProp.idPart())
+	return thisPath + ">" + idProp.getIdPartAsPath()
 }
 
 //------------------------------------------------------------------------------
@@ -71,14 +71,23 @@ func (thisPath PropPath) With(idProp *IDProp) PropPath {
 type IDProp struct {
 	from  PropPath     // the path for the objects this ID property should belong to
 	props [][]PropPath // e.g. [ [contract, general, uid], [contract, creationDate] ], for "contract>general>uid+contract>creationDate"
-	idStr string       // the "string" version, e.g. "contract>general>uid+contract>creationDate"
+	idStr PropPath     // the "string" version, e.g. "contract>general>uid+contract>creationDate"
+	alias string       // an alias, if the ID prop is too long
 }
 
 const (
 	idPropINDEX PropPath = "#index"
 )
 
-func (thisProp *IDProp) idPart() string {
+func (thisProp *IDProp) getIdPartAsPath() PropPath {
+	if thisProp.alias != "" {
+		return PropPath(thisProp.alias)
+	}
+
+	return thisProp.getFullIdPart()
+}
+
+func (thisProp *IDProp) getFullIdPart() PropPath {
 	// passing from [ [contract, general, uid], [contract, creationDate] ]
 	// to "contract>general>uid+contract>creationDate"
 	if thisProp.idStr == "" {
@@ -93,14 +102,10 @@ func (thisProp *IDProp) idPart() string {
 			paths = append(paths, pathString)
 		}
 
-		thisProp.idStr = strings.Join(paths, "+")
+		thisProp.idStr = PropPath(strings.Join(paths, "+"))
 	}
 
 	return thisProp.idStr
-}
-
-func (thisProp *IDProp) toFullString() string {
-	return fmt.Sprintf("%s:%s", thisProp.from, thisProp.idPart())
 }
 
 func (thisProp *IDProp) isIndex() bool {
@@ -115,7 +120,7 @@ func indexAsID(atPath PropPath) *IDProp {
 				idPropINDEX,
 			},
 		},
-		idStr: string(idPropINDEX),
+		idStr: idPropINDEX,
 	}
 }
 
@@ -127,7 +132,7 @@ func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) string {
 
 		for _, path := range pathChain { // ranging over [contract, general, uid]
 			// getting the value at that path from the current object:
-			switch value := currentObj[string(path)]; value.(type) {
+			switch value, ok := currentObj[string(path)]; value.(type) {
 			case float64:
 				//nolint:errcheck
 				floatValue := value.(float64)
@@ -152,88 +157,18 @@ func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) string {
 			default:
 				// if we have a nil value at the intended path, we still use it
 				if value == nil {
-					valuesForObj = append(valuesForObj, "*empty*")
+					if ok {
+						valuesForObj = append(valuesForObj, string(path)+"_null")
+					} else {
+						valuesForObj = append(valuesForObj, "no_"+string(path))
+					}
 				} else {
-					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s)", value, path, thisProp.toFullString()))
+					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s)",
+						value, path, thisProp.from, thisProp.getFullIdPart()))
 				}
 			}
 		}
 	}
 
 	return strings.Join(valuesForObj, "-")
-}
-
-//------------------------------------------------------------------------------
-// Comparison options
-//------------------------------------------------------------------------------
-
-type ComparisonOptions struct {
-	fileType  FileType             // the type of the files we're comparing
-	idProps   map[PropPath]*IDProp // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
-	autoIndex bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-	fast      bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-}
-
-func (thisComp *ComparisonOptions) GetFileType() FileType {
-	return thisComp.fileType
-}
-
-func (thisComp *ComparisonOptions) GetIDProp(atPropPath PropPath) *IDProp {
-	configuredProp := thisComp.idProps[atPropPath]
-
-	// applying the autoIndex if required and needed
-	if configuredProp == nil && thisComp.autoIndex {
-		println(fmt.Sprintf("WARNING: using the array index at path '%s'", atPropPath))
-
-		configuredProp = indexAsID(atPropPath)
-
-		thisComp.idProps[atPropPath] = configuredProp
-	}
-
-	return configuredProp
-}
-
-// builds a new ComparisonOptions object
-func NewOptions(isXml bool, idPropsString string, autoIndex bool, fast bool) *ComparisonOptions {
-	fileType := FileTypeJSON
-	if isXml {
-		fileType = FileTypeXML
-	}
-
-	// parsing the "idprops" string
-	idProps := map[PropPath]*IDProp{}
-
-	if idPropsString != "" {
-		for _, idPropString := range strings.Split(idPropsString, ",") {
-			idPropsElems := strings.Split(idPropString, ":::")
-			//nolint:gomnd
-			if len(idPropsElems) != 2 {
-				panic(fmt.Errorf("Error in the 'idprops' flag: '%s' does not respect the \">prop1>prop2>...>propN:idProp\n pattern, "+
-					"to configure which object field should be used at a given path to uniquely identify the objects", idPropString))
-			}
-
-			// we're building a new ID property
-			idProp := &IDProp{from: PropPath(idPropsElems[0])}
-
-			// we're handling the potential combination of several paths used as IDs - like "contract>general>uid+contract>creationDate"
-			for _, idPropPath := range strings.Split(idPropsElems[1], "+") {
-				successivePaths := []PropPath{}
-				for _, successivePath := range strings.Split(idPropPath, ">") {
-					successivePaths = append(successivePaths, PropPath(successivePath))
-				}
-
-				idProp.props = append(idProp.props, successivePaths)
-			}
-
-			// mapping the ID prop to the path where it applies
-			idProps[idProp.from] = idProp
-		}
-	}
-
-	return &ComparisonOptions{
-		fileType:  fileType,
-		idProps:   idProps,
-		autoIndex: autoIndex,
-		fast:      fast,
-	}
 }
