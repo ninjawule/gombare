@@ -163,8 +163,8 @@ func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) string {
 						valuesForObj = append(valuesForObj, "no_"+string(path))
 					}
 				} else {
-					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s)",
-						value, path, thisProp.from, thisProp.getFullIdPart()))
+					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s). Value = %v",
+						value, path, thisProp.from, thisProp.getFullIdPart(), value))
 				}
 			}
 		}
