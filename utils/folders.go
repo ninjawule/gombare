@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path"
 )
 
@@ -32,6 +33,11 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			// nope, fileName1 cannot be found in the 2nd folder
 			thisComparison[fileName1] = one_two(pathOne, "-")
 
+			// bit of logging
+			if !options.silent {
+				log.Printf("File '%s' only exists in dir one!", fileName1)
+			}
+
 		} else {
 			// yes, the file exists, so we can compare the 2 files
 			compFile1File2, errComp := CompareFiles(path.Join(pathOne, fileName1), path.Join(pathTwo, fileName1), options)
@@ -43,6 +49,10 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			if compFile1File2.hasDiffs() {
 				thisComparison[fileName1] = compFile1File2
 			}
+
+			if !options.silent {
+				log.Printf("Finished comparing, between the 2 directories, file: %s", fileName1)
+			}
 		}
 	}
 
@@ -52,6 +62,11 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 		if !checked[fileName2] {
 			// this is a file that exists in the 2nd folder and not the first, so:
 			thisComparison[fileName2] = one_two("-", pathTwo)
+
+			// bit of logging
+			if !options.silent {
+				log.Printf("File '%s' only exists in dir two!", fileName2)
+			}
 		}
 	}
 

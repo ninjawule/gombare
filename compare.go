@@ -13,7 +13,7 @@ func main() {
 	// reading the arguments
 	var one, two, idPropsString, outdir string
 
-	var xml, split, autoIndex, fast bool
+	var xml, split, autoIndex, fast, silent bool
 
 	flag.StringVar(&one, "one", "", "required: the path to the first file to compare; must be a JSON file, or XML with the -xml option")
 	flag.StringVar(&two, "two", "", "required: the path to the second file to compare; must be of the same first file's type")
@@ -23,6 +23,7 @@ func main() {
 	flag.BoolVar(&split, "split", false, "if 2 folders are compared, and if -outpir is used, then there's 1 comparison JSON produced for each pair of compared files")
 	flag.BoolVar(&autoIndex, "autoIndex", false, "if true, then for array of objects with no id prop (cf. idprops option), the objects' indexes in the arrays are used as IDs")
 	flag.BoolVar(&fast, "fast", false, "if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user")
+	flag.BoolVar(&silent, "silent", false, "if true, then no info / warning message is written out")
 
 	flag.Parse()
 
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	// the comparison options
-	options := u.NewOptions(xml, idPropsString, autoIndex, fast)
+	options := u.NewOptions(xml, idPropsString, autoIndex, fast, silent)
 
 	// checking the nature of the inputs
 	oneDir := isDirectory(one)
