@@ -37,6 +37,7 @@ func main() {
 	options := u.NewOptions(xml, idPropsString, autoIndex, fast, silent)
 
 	// checking the nature of the inputs
+	//nolint:if-short
 	oneDir := isDirectory(one)
 	twoDir := isDirectory(two)
 

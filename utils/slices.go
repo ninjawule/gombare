@@ -101,37 +101,14 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 			}
 		}
 
-	case reflect.Slice: // building a map for the inner slices, using their index in the surrounding slice as keys
-		if len(slice) > 0 {
-			switch slice[0].(type) {
-			case map[string]interface{}:
-				for innerSliceIndex, innerObj := range slice {
-					//nolint:errcheck
-					result[strconv.Itoa(innerSliceIndex+1)] = innerObj.(map[string]interface{})
-				}
-			case []interface{}:
-				innerSliceKind := reflect.ValueOf(slice[0]).Kind()
-				for innerSliceIndex, innerSlice := range slice {
-					// TODO
-					// TODO
-					// TODO : change the automatic use of the index here
-					// TODO
-					// TODO
-					result[strconv.Itoa(innerSliceIndex+1)] = sliceToMapOfObjects(currentPath.With(indexAsID(currentPath)), innerSliceKind, innerSlice.([]interface{}), options)
-				}
-			case []map[string]interface{}:
-				for innerSliceIndex, innerSlice := range slice {
-					// TODO
-					// TODO
-					// TODO : change the automatic use of the index here
-					// TODO
-					// TODO
-					result[strconv.Itoa(innerSliceIndex+1)] = sliceToMapOfMaps(currentPath.With(indexAsID(currentPath)), innerSlice.([]map[string]interface{}), options)
-				}
-			default:
-				panic(fmt.Sprintf("There's an issue with a slice of slices here at path '%s'. Inner slice kind = %s", currentPath, reflect.ValueOf(slice[0]).Kind()))
-			}
-		}
+	case reflect.Slice: // we have a freaking MATRIX here !
+		// we ASSUME that the elements inside each "cell" of this multi-dimensional array are of the same nature; (if not, for now, we're screwed)
+		// that being said, we don't see any interest, for the purpose of comparing stuff, of maintaining such a complex structure;
+		// so, we'll put every single element that is not a slice, into a single array, before treating it like a normal slice
+		matrixAsSlice := matrixToSlice(slice)
+		matrixCellKind := reflect.ValueOf(matrixAsSlice[0]).Kind()
+
+		return sliceToMapOfObjects(currentPath, matrixCellKind, matrixAsSlice, options)
 
 	default:
 		// this should never happen
