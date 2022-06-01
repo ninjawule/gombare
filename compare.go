@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// reading the arguments
-	var one, two, idPropsString, outdir string
+	var one, two, idPropsString, outdir, orderByString string
 
 	var xml, split, autoIndex, fast, silent bool
 
@@ -24,6 +24,7 @@ func main() {
 	flag.BoolVar(&autoIndex, "autoIndex", false, "if true, then for array of objects with no id prop (cf. idprops option), the objects' indexes in the arrays are used as IDs")
 	flag.BoolVar(&fast, "fast", false, "if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user")
 	flag.BoolVar(&silent, "silent", false, "if true, then no info / warning message is written out")
+	flag.StringVar(&orderByString, "orderby", "", "for array of objects that we cannot really define an ID property for, we want to sort them before comparing them, using their index. The syntax is the same as for the -idprops option")
 
 	flag.Parse()
 
@@ -34,10 +35,10 @@ func main() {
 	}
 
 	// the comparison options
-	options := u.NewOptions(xml, idPropsString, autoIndex, fast, silent)
+	options := u.NewOptions(xml, idPropsString, autoIndex, orderByString, fast, silent)
 
 	// checking the nature of the inputs
-	//nolint:if-short
+	//nolint:ifshort
 	oneDir := isDirectory(one)
 	twoDir := isDirectory(two)
 

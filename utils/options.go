@@ -16,6 +16,7 @@ type ComparisonOptions struct {
 	autoIndex bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
 	fast      bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
 	silent    bool                 // if true, then no info / warning message is written out
+	orderBy   map[PropPath]*IDProp // the properties (values of the map) serving as sorting keys for given paths (keys of the map)
 }
 
 func (thisComp *ComparisonOptions) GetFileType() FileType {
@@ -39,37 +40,49 @@ func (thisComp *ComparisonOptions) GetIDProp(atPropPath PropPath) *IDProp {
 	return configuredProp
 }
 
-const idPropAS = " as "
+const propALIAS_SEP = " as "
 
 // builds a new ComparisonOptions object
-func NewOptions(isXml bool, idPropsString string, autoIndex bool, fast bool, silent bool) *ComparisonOptions {
+func NewOptions(isXml bool, idPropsString string, autoIndex bool, orderByString string, fast bool, silent bool) *ComparisonOptions {
 	fileType := FileTypeJSON
 	if isXml {
 		fileType = FileTypeXML
 	}
 
-	// parsing the "idprops" string
-	idProps := map[PropPath]*IDProp{}
+	return &ComparisonOptions{
+		fileType:  fileType,
+		idProps:   parsePathsAndPropsString(idPropsString, "idprops"),
+		autoIndex: autoIndex,
+		fast:      fast,
+		silent:    silent,
+		orderBy:   parsePathsAndPropsString(orderByString, "orderby"),
+	}
+}
 
-	if idPropsString != "" {
-		for _, idPropString := range strings.Split(idPropsString, ",") {
-			idPropsElems := strings.Split(idPropString, ":::")
+func parsePathsAndPropsString(pathsAndPropsString string, optionString string) map[PropPath]*IDProp {
+
+	// parsing the "idprops" string
+	props := map[PropPath]*IDProp{}
+
+	if pathsAndPropsString != "" {
+		for _, propString := range strings.Split(pathsAndPropsString, ",") {
+			propsElems := strings.Split(propString, ":::")
 			//nolint:gomnd
-			if len(idPropsElems) != 2 {
-				panic(fmt.Errorf("Error in the 'idprops' flag: '%s' does not respect the \">prop1>prop2>...>propN:idProp\n pattern, "+
-					"to configure which object field should be used at a given path to uniquely identify the objects", idPropString))
+			if len(propsElems) != 2 {
+				panic(fmt.Errorf("Error in the '%s' flag: '%s' does not respect the \">prop1>prop2>...>propN:prop\n pattern, "+
+					"to configure which object field should be used at a given path to uniquely identify the objects", optionString, propString))
 			}
 
 			// we're building a new ID property
-			idProp := &IDProp{from: PropPath(idPropsElems[0])}
+			prop := &IDProp{from: PropPath(propsElems[0])}
 
 			// we're handling the potential combination of several paths used as IDs - like "contract>general>uid+contract>creationDate"
-			for _, idPropPath := range strings.Split(idPropsElems[1], "+") {
+			for _, propPath := range strings.Split(propsElems[1], "+") {
 				successivePaths := []PropPath{}
 				alias := ""
 
-				for _, successivePath := range strings.Split(idPropPath, ">") {
-					switch elements := strings.Split(successivePath, idPropAS); len(elements) {
+				for _, successivePath := range strings.Split(propPath, ">") {
+					switch elements := strings.Split(successivePath, propALIAS_SEP); len(elements) {
 					case 1:
 						successivePaths = append(successivePaths, PropPath(successivePath))
 					//nolint
@@ -81,20 +94,14 @@ func NewOptions(isXml bool, idPropsString string, autoIndex bool, fast bool, sil
 					}
 				}
 
-				idProp.props = append(idProp.props, successivePaths)
-				idProp.alias = alias
+				prop.props = append(prop.props, successivePaths)
+				prop.alias = alias
 			}
 
 			// mapping the ID prop to the path where it applies
-			idProps[idProp.from] = idProp
+			props[prop.from] = prop
 		}
 	}
 
-	return &ComparisonOptions{
-		fileType:  fileType,
-		idProps:   idProps,
-		autoIndex: autoIndex,
-		fast:      fast,
-		silent:    silent,
-	}
+	return props
 }

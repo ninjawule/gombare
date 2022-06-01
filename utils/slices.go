@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 )
 
@@ -77,6 +78,13 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 		idProp := options.GetIDProp(currentPath)
 		if idProp == nil {
 			panic(fmt.Sprintf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath))
+		}
+
+		// do we need to sort here ?
+		if sortProp := options.orderBy[currentPath]; sortProp != nil {
+			sort.Slice(slice, func(i, j int) bool {
+				return sortProp.getValueForObj(slice[i].(map[string]interface{})) < sortProp.getValueForObj(slice[j].(map[string]interface{}))
+			})
 		}
 
 		// special case where we use the slice elements' indexes as keys for the map we're building
