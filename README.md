@@ -3,7 +3,8 @@ Takes 2 JSON or XML files and compare them. The result is given as a JSON. Also 
 
 ## TODO
 
-- Examples
+[ ] Examples
+[ ] `-split` and `-outdir` options not developed yet
 
 ## How to use
 
@@ -11,11 +12,11 @@ Takes 2 JSON or XML files and compare them. The result is given as a JSON. Also 
 -> % json-compare -h
 Usage of json-compare:
   -autoIndex
-    	if true, then for array of objects with no id prop (cf. idprops option), the objects' indexes in the arrays are used as IDs
+    	if true, then for array of objects with no id prop (cf. idprops option), the object indexes in the arrays are used as IDs
   -fast
     	if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user; WARNING: this can lead to missing some differences!
   -idprops string
-    	for an array of objects, we need an identifying property for the objects, for sorting purposes amongst other things; if '#index' is used as an ID, then that means that an object's index in the surrounding array is used as its ID; example: ">path1>path2>path3:::propA+path4>propB as id3,>path1>path2>path3>id3>path5:::propC"
+    	for an array of objects, we need an identifying property for the objects, for sorting purposes amongst other things; if '#index' is used as an ID, then that means that an object index in the surrounding array is used as its ID; example: ">path1>path2>path3:::propA+path4>propB as id3,>path1>path2>path3>id3>path5:::propC"
   -one string
     	required: the path to the first file to compare; must be a JSON file, or XML with the -xml option
   -orderby string
@@ -25,11 +26,11 @@ Usage of json-compare:
   -silent
     	if true, then no info / warning message is written out
   -split
-    	if 2 folders are compared, and if -outpir is used, then there's 1 comparison JSON produced for each pair of compared files
+    	if 2 folders are compared, and if -outpir is used, then there is 1 comparison JSON produced for each pair of compared files
   -stopAtFirst
     	if true, then, when comparing folders, we stop at the first couple of files that differ
   -two string
-    	required: the path to the second file to compare; must be of the same first file's type
+    	required: the path to the second file to compare; must be of the same first file type
   -xml
     	use this option if the files are XML files
 ```
