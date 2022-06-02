@@ -3,8 +3,8 @@ Takes 2 JSON or XML files and compare them. The result is given as a JSON. Also 
 
 ## TODO
 
-[ ] Examples
-[ ] `-split` and `-outdir` options not developed yet
+- [ ] Examples
+- [ ] `-split` and `-outdir` options not developed yet
 
 ## How to use
 
