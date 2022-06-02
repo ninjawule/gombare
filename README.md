@@ -37,7 +37,7 @@ Usage of json-compare:
 
 ## Acknowledgments
 
-Using the really nice [xml2map](https://github.com/sbabiv/xml2map) program from [Sergey Babiv](https://github.com/sbabiv).
+Using the really nice [xml2map](https://github.com/sbabiv/xml2map) program from [Sergey Babiv](https://github.com/sbabiv) for the necessary `XML -> map[string]interface{}` transformation.
 
 ## Licence 
 
