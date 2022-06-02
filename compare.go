@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	u "github.com/ninjawule/json-compare/utils"
+	c "github.com/ninjawule/json-compare/core"
 )
 
 func main() {
@@ -35,11 +35,12 @@ func main() {
 	}
 
 	// the comparison options
-	options := u.NewOptions(xml, idPropsString, autoIndex, orderByString, fast, silent)
+	options := c.NewOptions(xml, idPropsString, autoIndex, orderByString, fast, silent)
 
 	// checking the nature of the inputs
 	//nolint:ifshort
 	oneDir := isDirectory(one)
+	//nolint:ifshort
 	twoDir := isDirectory(two)
 
 	if oneDir != twoDir {
@@ -47,15 +48,15 @@ func main() {
 	}
 
 	// the comparison result
-	var comparison u.Comparison
+	var comparison c.Comparison
 
 	var errComp error
 
 	// comparing 2 files, or 2 folders
 	if !oneDir {
-		comparison, errComp = u.CompareFiles(one, two, options)
+		comparison, errComp = c.CompareFiles(one, two, options)
 	} else {
-		comparison, errComp = u.CompareFolders(one, two, options)
+		comparison, errComp = c.CompareFolders(one, two, options)
 	}
 
 	if errComp != nil {
