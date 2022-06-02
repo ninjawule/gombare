@@ -37,24 +37,34 @@ func compareSlicesOfObjects(currentPath PropPath, slice1, slice2 []interface{}, 
 
 	// for now, we reject slices with heterogenous kinds
 	if slice1Kind != slice2Kind {
-		return nil, fmt.Errorf("Issue at path '%s' : type '%s' in the first file VS type '%s' in the second file", currentPath, slice1Kind, slice2Kind)
+		return nil, fmt.Errorf("Issue at path '%s' : type '%s' in the first file VS type '%s' in the second file.\n\n%v\n\nVS\n\n%v",
+			currentPath, slice1Kind, slice2Kind, slice1, slice2)
 	}
 
 	// transforming the slices to maps, to allow for map comparison
-	map1 := sliceToMapOfObjects(currentPath, slice1Kind, slice1, options)
-	map2 := sliceToMapOfObjects(currentPath, slice2Kind, slice2, options)
+	var map1, map2 map[string]interface{}
+
+	var errTransfo error
+
+	if map1, errTransfo = sliceToMapOfObjects(currentPath, slice1Kind, slice1, options); errTransfo != nil {
+		return nil, errTransfo
+	}
+
+	if map2, errTransfo = sliceToMapOfObjects(currentPath, slice2Kind, slice2, options); errTransfo != nil {
+		return nil, errTransfo
+	}
 
 	// we know how to deal with maps
 	return compareMaps(currentPath, map1, map2, options, true)
 }
 
 //nolint:cyclop,gocyclo,gocognit
-func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []interface{}, options *ComparisonOptions) map[string]interface{} {
+func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []interface{}, options *ComparisonOptions) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	switch sliceKind {
 	case reflect.Bool:
-		panic(fmt.Errorf("Slices of %ss (like at path '%s') are not handled yet! Who use them anyway ??", sliceKind, currentPath))
+		return nil, fmt.Errorf("Slices of %ss (like at path '%s') are not handled yet! Who use them anyway ??", sliceKind, currentPath)
 
 	case reflect.Float64: // building a map of floats (or integers), using their values as keys
 		for _, number := range slice {
@@ -77,7 +87,7 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 		// controlling that we have an ID to identify the objects in the map
 		idProp := options.GetIDProp(currentPath)
 		if idProp == nil {
-			panic(fmt.Sprintf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath))
+			return nil, fmt.Errorf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath)
 		}
 
 		// do we need to sort here ?
@@ -93,7 +103,7 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 				result[fmt.Sprintf("#%d", i+1)] = objInSlice
 			}
 
-			return result
+			return result, nil
 		}
 
 		// or... using the value targeted by the ID property for each object as its ID
@@ -103,7 +113,7 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 			} else {
 				key := idProp.getValueForObj(object.(map[string]interface{}))
 				if result[key] != nil {
-					panic(fmt.Errorf("Comparison has failed: there is more than 1 object with key '%s' at path '%s'", key, currentPath))
+					return nil, fmt.Errorf("Comparison has failed: there is more than 1 object with key '%s' at path '%s'", key, currentPath)
 				}
 				result[key] = object
 			}
@@ -120,10 +130,10 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 
 	default:
 		// this should never happen
-		panic(fmt.Errorf("Cannot sort a slice of %ss yet!", sliceKind))
+		return nil, fmt.Errorf("Cannot sort a slice of %ss yet!", sliceKind)
 	}
 
-	return result
+	return result, nil
 }
 
 //------------------------------------------------------------------------------
@@ -150,20 +160,37 @@ func compareSlicesOfMaps(currentPath PropPath, slice1, slice2 []map[string]inter
 	}
 
 	// mapping all the maps
-	map1 := sliceToMapOfMaps(currentPath, slice1, options)
-	map2 := sliceToMapOfMaps(currentPath, slice2, options)
+	var map1, map2 map[string]interface{}
+
+	var errTransfo error
+
+	if map1, errTransfo = sliceToMapOfMaps(currentPath, slice1, options); errTransfo != nil {
+		return nil, errTransfo
+	}
+
+	if map2, errTransfo = sliceToMapOfMaps(currentPath, slice2, options); errTransfo != nil {
+		return nil, errTransfo
+	}
 
 	// we know how to deal with maps
 	return compareMaps(currentPath, map1, map2, options, true)
 }
 
-func sliceToMapOfMaps(currentPath PropPath, slice []map[string]interface{}, options *ComparisonOptions) map[string]interface{} {
+func sliceToMapOfMaps(currentPath PropPath, slice []map[string]interface{}, options *ComparisonOptions) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	// controlling that we have an ID to identify the objects in the map
 	idProp := options.GetIDProp(currentPath)
 	if idProp == nil {
-		panic(fmt.Sprintf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath))
+		return nil, fmt.Errorf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath)
+	}
+
+	// do we need to sort here ?
+	println("dealing with " + currentPath)
+	if sortProp := options.orderBy[currentPath]; sortProp != nil {
+		sort.Slice(slice, func(i, j int) bool {
+			return sortProp.getValueForObj(slice[i]) < sortProp.getValueForObj(slice[j])
+		})
 	}
 
 	// using the slice elements' indexes as keys ?
@@ -172,7 +199,7 @@ func sliceToMapOfMaps(currentPath PropPath, slice []map[string]interface{}, opti
 			result[fmt.Sprintf("#%d", i+1)] = mapInSlice
 		}
 
-		return result
+		return result, nil
 	}
 
 	// or... using the value targeted by the ID property for each object as its ID
@@ -180,5 +207,5 @@ func sliceToMapOfMaps(currentPath PropPath, slice []map[string]interface{}, opti
 		result[idProp.getValueForObj(mapInSlice)] = mapInSlice
 	}
 
-	return result
+	return result, nil
 }

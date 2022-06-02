@@ -60,7 +60,6 @@ func NewOptions(isXml bool, idPropsString string, autoIndex bool, orderByString 
 }
 
 func parsePathsAndPropsString(pathsAndPropsString string, optionString string) map[PropPath]*IDProp {
-
 	// parsing the "idprops" string
 	props := map[PropPath]*IDProp{}
 
@@ -74,7 +73,7 @@ func parsePathsAndPropsString(pathsAndPropsString string, optionString string) m
 			}
 
 			// we're building a new ID property
-			prop := &IDProp{from: PropPath(propsElems[0])}
+			prop := &IDProp{from: PropPath(strings.TrimSpace(propsElems[0]))}
 
 			// we're handling the potential combination of several paths used as IDs - like "contract>general>uid+contract>creationDate"
 			for _, propPath := range strings.Split(propsElems[1], "+") {
@@ -84,10 +83,10 @@ func parsePathsAndPropsString(pathsAndPropsString string, optionString string) m
 				for _, successivePath := range strings.Split(propPath, ">") {
 					switch elements := strings.Split(successivePath, propALIAS_SEP); len(elements) {
 					case 1:
-						successivePaths = append(successivePaths, PropPath(successivePath))
+						successivePaths = append(successivePaths, PropPath(strings.TrimSpace(successivePath)))
 					//nolint
 					case 2:
-						successivePaths = append(successivePaths, PropPath(elements[0]))
+						successivePaths = append(successivePaths, PropPath(strings.TrimSpace(elements[0])))
 						alias = elements[1]
 					default:
 						panic(fmt.Errorf("Error while using an alias in this ID prop: %s", successivePath))

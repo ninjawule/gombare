@@ -78,7 +78,7 @@ func main() {
 func isDirectory(path string) bool {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		panic(fmt.Sprintf("Could not check wether '%s' is a directory or not. Cause: %s", path, err))
+		panic(fmt.Errorf("Could not check wether '%s' is a directory or not. Cause: %s", path, err))
 	}
 
 	return fileInfo.IsDir()

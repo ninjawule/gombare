@@ -18,7 +18,6 @@ func copyMatrixElementsToSlice(matrix []interface{}, resultSlice []interface{}) 
 
 	// now, let's handle the matrix elements, depending on their type
 	switch matrix[0].(type) {
-
 	// here we need recursion to handle 3D and more
 	case []interface{}:
 		for _, elem := range matrix {

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"time"
 )
 
 //------------------------------------------------------------------------------
@@ -13,12 +14,23 @@ import (
 
 // CompareFolders : getting a diff between 2 files, JSON or XML (for now)
 func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Comparison, error) {
+	// lesssgooooo
+	start := time.Now()
+
 	// the result from comparing the 2 folders
 	thisComparison := map[string]interface{}{}
 
 	// listing the files within the 2 folders
-	filesOne := listFilesToMap(pathOne)
-	filesTwo := listFilesToMap(pathTwo)
+	filesOne, errList1 := listFilesToMap(pathOne)
+	filesTwo, errList2 := listFilesToMap(pathTwo)
+
+	if errList1 != nil {
+		return nil, errList1
+	}
+
+	if errList2 != nil {
+		return nil, errList2
+	}
 
 	// first, let's keep track of the files we encounter
 	checked := map[string]bool{}
@@ -39,6 +51,10 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			}
 
 		} else {
+			if !options.silent {
+				log.Printf("Just started comparing files: %s", fileName1)
+			}
+
 			// yes, the file exists, so we can compare the 2 files
 			compFile1File2, errComp := CompareFiles(path.Join(pathOne, fileName1), path.Join(pathTwo, fileName1), options)
 			if errComp != nil {
@@ -48,10 +64,6 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			// adding only if there's at least 1 difference
 			if compFile1File2.hasDiffs() {
 				thisComparison[fileName1] = compFile1File2
-			}
-
-			if !options.silent {
-				log.Printf("Finished comparing, between the 2 directories, file: %s", fileName1)
 			}
 		}
 	}
@@ -70,18 +82,22 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 		}
 	}
 
+	if !options.silent {
+		log.Printf("Finished comparing the two folders in %s", time.Since(start))
+	}
+
 	return thisComparison, nil
 }
 
 // returns a directory's list of files as a map
-func listFilesToMap(path string) map[string]bool {
+func listFilesToMap(path string) (map[string]bool, error) {
 	// we'll use the filenames as keys
 	result := map[string]bool{}
 
 	// reading the current path
 	fileInfos, errRead := ioutil.ReadDir(path)
 	if errRead != nil {
-		panic(fmt.Sprintf("Error while listing file at path '%s'. Cause: %s", path, errRead))
+		return nil, fmt.Errorf("Error while listing file at path '%s'. Cause: %s", path, errRead)
 	}
 
 	// let's list the files
@@ -89,5 +105,5 @@ func listFilesToMap(path string) map[string]bool {
 		result[fileInfo.Name()] = true
 	}
 
-	return result
+	return result, nil
 }
