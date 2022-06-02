@@ -158,9 +158,9 @@ func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) string {
 				// if we have a nil value at the intended path, we still use it
 				if value == nil {
 					if ok {
-						valuesForObj = append(valuesForObj, string(path)+"_null")
+						valuesForObj = append(valuesForObj, string(path))
 					} else {
-						valuesForObj = append(valuesForObj, "no_"+string(path))
+						valuesForObj = append(valuesForObj, "("+string(path)+")")
 					}
 				} else {
 					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s). Value = %v",

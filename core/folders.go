@@ -35,6 +35,9 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 	// first, let's keep track of the files we encounter
 	checked := map[string]bool{}
 
+	// let's count the total number of different files in the union of the two folders
+	nbFiles := len(filesOne)
+
 	// going through the files in the first folder, and comparing with the ones in the second folder
 	for fileName1 := range filesOne {
 		// this file is being checked
@@ -82,6 +85,9 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 	for fileName2 := range filesTwo {
 		// we're considering files that have not been checked yet
 		if !checked[fileName2] {
+			// that's one more file
+			nbFiles++
+
 			// this is a file that exists in the 2nd folder and not the first, so:
 			thisComparison[fileName2] = one_two("-", pathTwo)
 
@@ -99,7 +105,7 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 
 END:
 	if !options.silent {
-		log.Printf("Finished comparing the two folders in %s", time.Since(start))
+		log.Printf("Finished comparing the two folders in %s; %d diffs over %d files", time.Since(start), len(thisComparison), nbFiles)
 	}
 
 	return thisComparison, nil
