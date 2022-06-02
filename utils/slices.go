@@ -186,7 +186,6 @@ func sliceToMapOfMaps(currentPath PropPath, slice []map[string]interface{}, opti
 	}
 
 	// do we need to sort here ?
-	println("dealing with " + currentPath)
 	if sortProp := options.orderBy[currentPath]; sortProp != nil {
 		sort.Slice(slice, func(i, j int) bool {
 			return sortProp.getValueForObj(slice[i]) < sortProp.getValueForObj(slice[j])
