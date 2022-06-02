@@ -50,6 +50,11 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 				log.Printf("File '%s' only exists in dir one!", fileName1)
 			}
 
+			// if required, we stop here
+			if options.stopAtFirst {
+				goto END
+			}
+
 		} else {
 			if !options.silent {
 				log.Printf("Just started comparing files: %s", fileName1)
@@ -64,6 +69,11 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			// adding only if there's at least 1 difference
 			if compFile1File2.hasDiffs() {
 				thisComparison[fileName1] = compFile1File2
+
+				// if required, we stop here
+				if options.stopAtFirst {
+					goto END
+				}
 			}
 		}
 	}
@@ -79,9 +89,15 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			if !options.silent {
 				log.Printf("File '%s' only exists in dir two!", fileName2)
 			}
+
+			// if required, we stop here
+			if options.stopAtFirst {
+				goto END
+			}
 		}
 	}
 
+END:
 	if !options.silent {
 		log.Printf("Finished comparing the two folders in %s", time.Since(start))
 	}

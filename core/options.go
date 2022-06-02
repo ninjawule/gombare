@@ -11,12 +11,13 @@ import (
 //------------------------------------------------------------------------------
 
 type ComparisonOptions struct {
-	fileType  FileType             // the type of the files we're comparing
-	idProps   map[PropPath]*IDProp // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
-	autoIndex bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-	fast      bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-	silent    bool                 // if true, then no info / warning message is written out
-	orderBy   map[PropPath]*IDProp // the properties (values of the map) serving as sorting keys for given paths (keys of the map)
+	fileType    FileType             // the type of the files we're comparing
+	idProps     map[PropPath]*IDProp // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
+	autoIndex   bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
+	fast        bool                 // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
+	silent      bool                 // if true, then no info / warning message is written out
+	orderBy     map[PropPath]*IDProp // the properties (values of the map) serving as sorting keys for given paths (keys of the map)
+	stopAtFirst bool                 // if true, then, when comparing folders, we stop at the first couple of files that differ
 }
 
 func (thisComp *ComparisonOptions) GetFileType() FileType {
@@ -43,19 +44,20 @@ func (thisComp *ComparisonOptions) GetIDProp(atPropPath PropPath) *IDProp {
 const propALIAS_SEP = " as "
 
 // builds a new ComparisonOptions object
-func NewOptions(isXml bool, idPropsString string, autoIndex bool, orderByString string, fast bool, silent bool) *ComparisonOptions {
+func NewOptions(isXml bool, idPropsString string, autoIndex bool, orderByString string, fast bool, silent bool, stopAtFirst bool) *ComparisonOptions {
 	fileType := FileTypeJSON
 	if isXml {
 		fileType = FileTypeXML
 	}
 
 	return &ComparisonOptions{
-		fileType:  fileType,
-		idProps:   parsePathsAndPropsString(idPropsString, "idprops"),
-		autoIndex: autoIndex,
-		fast:      fast,
-		silent:    silent,
-		orderBy:   parsePathsAndPropsString(orderByString, "orderby"),
+		fileType:    fileType,
+		idProps:     parsePathsAndPropsString(idPropsString, "idprops"),
+		autoIndex:   autoIndex,
+		fast:        fast,
+		silent:      silent,
+		orderBy:     parsePathsAndPropsString(orderByString, "orderby"),
+		stopAtFirst: stopAtFirst,
 	}
 }
 
