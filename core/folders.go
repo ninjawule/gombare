@@ -119,7 +119,7 @@ func listFilesToMap(path string) (map[string]bool, error) {
 	// reading the current path
 	fileInfos, errRead := ioutil.ReadDir(path)
 	if errRead != nil {
-		return nil, fmt.Errorf("Error while listing file at path '%s'. Cause: %s", path, errRead)
+		return nil, fmt.Errorf("Error while listing files at path '%s'. Cause: %s", path, errRead)
 	}
 
 	// let's list the files
