@@ -70,7 +70,7 @@ func (thisPath PropPath) With(idProp *IDProp) PropPath {
 // - a combination of several properties; e.g. "contract>general>uid+contract>creationDate"
 type IDProp struct {
 	from  PropPath     // the path for the objects this ID property should belong to
-	props [][]PropPath // e.g. [ [contract, general, uid], [contract, creationDate] ], for "contract>general>uid+contract>creationDate"
+	props [][]PropPath // e.g. [ [contract, general, uid], [contract, creationDate, signatureDate] ], for "contract>general>uid-contract>creationDate+signatureDate"
 	idStr PropPath     // the "string" version, e.g. "contract>general>uid+contract>creationDate"
 	alias string       // an alias, if the ID prop is too long
 }
@@ -102,7 +102,7 @@ func (thisProp *IDProp) getFullIdPart() PropPath {
 			paths = append(paths, pathString)
 		}
 
-		thisProp.idStr = PropPath(strings.Join(paths, "+"))
+		thisProp.idStr = PropPath(strings.Join(paths, "-"))
 	}
 
 	return thisProp.idStr
@@ -124,51 +124,82 @@ func indexAsID(atPath PropPath) *IDProp {
 	}
 }
 
-func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) string {
-	valuesForObj := []string{}
-
-	for _, pathChain := range thisProp.props { // ranging over smth like this: [ [contract, general, uid], [contract, creationDate] ]
-		currentObj := obj // starting from the "root" object
-
-		for _, path := range pathChain { // ranging over [contract, general, uid]
-			// getting the value at that path from the current object:
-			switch value, ok := currentObj[string(path)]; value.(type) {
-			case float64:
-				//nolint:errcheck
-				floatValue := value.(float64)
-				if floatValue == float64(int(floatValue)) {
-					valuesForObj = append(valuesForObj, strconv.Itoa(int(floatValue)))
-				} else {
-					//nolint:revive, gomnd
-					valuesForObj = append(valuesForObj, strconv.FormatFloat(floatValue, 'f', 6, 64))
-				}
-			case string:
-				valuesForObj = append(valuesForObj, value.(string))
-			case bool:
-				if value.(bool) {
-					valuesForObj = append(valuesForObj, "true")
-				} else {
-					valuesForObj = append(valuesForObj, "false")
-				}
-			case map[string]interface{}:
-				// going deeper
-				//nolint:errcheck
-				currentObj = value.(map[string]interface{})
-			default:
-				// if we have a nil value at the intended path, we still use it
-				if value == nil {
-					if ok {
-						valuesForObj = append(valuesForObj, string(path))
-					} else {
-						valuesForObj = append(valuesForObj, "("+string(path)+")")
-					}
-				} else {
-					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s). Value = %v",
-						value, path, thisProp.from, thisProp.getFullIdPart(), value))
-				}
-			}
-		}
+func (thisProp *IDProp) getValueForObj(obj map[string]interface{}) (result string) {
+	for _, pathChain := range thisProp.props { // ranging over smth like this: [ [contract, general, uid], [contract, creationDate, ] ]
+		// getting the string value for this root object, at the start of the given path chain
+		result = concatValues(result, "-", thisProp.getStringValueForObjAtPath(obj, pathChain, 0))
 	}
 
-	return strings.Join(valuesForObj, "-")
+	return
+}
+
+// utility function to gracefully contact 2 strings
+func concatValues(val1, with, val2 string) string {
+	if val1 == "" {
+		return val2
+	}
+
+	if val2 == "" {
+		return val1
+	}
+
+	return val1 + with + val2
+}
+
+// recursive function to read the values at the given path index + at the following path indexes
+//nolint:revive
+func (thisProp *IDProp) getStringValueForObjAtPath(obj map[string]interface{}, pathChain []PropPath, pathIndex int) string {
+	// we know we have to put a stop right here
+	if pathIndex == len(pathChain) {
+		return ""
+	}
+
+	switch value, ok := obj[string(pathChain[pathIndex])]; value.(type) {
+
+	case float64:
+		//nolint:errcheck
+		floatValue := value.(float64)
+		if floatValue == float64(int(floatValue)) {
+			return concatValues(strconv.Itoa(int(floatValue)), "+", thisProp.getStringValueForObjAtPath(obj, pathChain, pathIndex+1))
+		} else {
+			//nolint:revive, gomnd
+			return concatValues(strconv.FormatFloat(floatValue, 'f', 6, 64), "+", thisProp.getStringValueForObjAtPath(obj, pathChain, pathIndex+1))
+		}
+
+	case string:
+		return concatValues(value.(string), "+", thisProp.getStringValueForObjAtPath(obj, pathChain, pathIndex+1))
+
+	case bool:
+		if value.(bool) {
+			return concatValues("true", "+", thisProp.getStringValueForObjAtPath(obj, pathChain, pathIndex+1))
+		} else {
+			return concatValues("false", "+", thisProp.getStringValueForObjAtPath(obj, pathChain, pathIndex+1))
+		}
+
+	case map[string]interface{}:
+		// we're "descending" into an object here
+		return thisProp.getStringValueForObjAtPath(value.(map[string]interface{}), pathChain, pathIndex+1)
+
+	case []map[string]interface{}:
+		// now, we're building a key from an array of objects, hurraaay
+		values := []string{}
+		for _, arrayObj := range value.([]map[string]interface{}) {
+			values = append(values, thisProp.getStringValueForObjAtPath(arrayObj, pathChain, pathIndex+1))
+		}
+
+		return strings.Join(values, "|")
+
+	default:
+		// if we have a nil value at the intended path, we still use it
+		if value == nil {
+			if ok { // the value was present
+				return string(pathChain[pathIndex])
+			} else { // the value was missing
+				return "(" + string(pathChain[pathIndex]) + ")"
+			}
+		} else {
+			panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s - or: %v). Value = %v",
+				value, pathChain[pathIndex], thisProp.from, thisProp.getFullIdPart(), thisProp.props, value))
+		}
+	}
 }

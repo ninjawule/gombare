@@ -74,29 +74,30 @@ func parsePathsAndPropsString(pathsAndPropsString string, optionString string) m
 					"to configure which object field should be used at a given path to uniquely identify the objects", optionString, propString))
 			}
 
-			// we're building a new ID property
+			// we're building a new ID property, with the path given on the lefthand side of the :::
 			prop := &IDProp{from: PropPath(strings.TrimSpace(propsElems[0]))}
 
+			// on the righthand side, we have the ID string
+			propIDString := propsElems[1]
+
+			// do we have an alias ? handling it
+			//nolint:gomnd
+			if propIDStringParts := strings.Split(propIDString, propALIAS_SEP); len(propIDStringParts) == 2 {
+				propIDString = propIDStringParts[0]
+				prop.alias = propIDStringParts[1]
+			}
+
 			// we're handling the potential combination of several paths used as IDs - like "contract>general>uid+contract>creationDate"
-			for _, propPath := range strings.Split(propsElems[1], "+") {
+			for _, propPath := range strings.Split(propIDString, "-") {
 				successivePaths := []PropPath{}
-				alias := ""
 
 				for _, successivePath := range strings.Split(propPath, ">") {
-					switch elements := strings.Split(successivePath, propALIAS_SEP); len(elements) {
-					case 1:
-						successivePaths = append(successivePaths, PropPath(strings.TrimSpace(successivePath)))
-					//nolint
-					case 2:
-						successivePaths = append(successivePaths, PropPath(strings.TrimSpace(elements[0])))
-						alias = elements[1]
-					default:
-						panic(fmt.Errorf("Error while using an alias in this ID prop: %s", successivePath))
+					for _, pathElement := range strings.Split(strings.TrimSpace(successivePath), "+") {
+						successivePaths = append(successivePaths, PropPath(pathElement))
 					}
 				}
 
 				prop.props = append(prop.props, successivePaths)
-				prop.alias = alias
 			}
 
 			// mapping the ID prop to the path where it applies

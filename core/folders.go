@@ -13,6 +13,7 @@ import (
 //------------------------------------------------------------------------------
 
 // CompareFolders : getting a diff between 2 files, JSON or XML (for now)
+//nolint:gocognit,gocyclo,cyclop
 func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Comparison, error) {
 	// lesssgooooo
 	start := time.Now()
