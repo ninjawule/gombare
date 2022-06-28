@@ -1,4 +1,4 @@
-package utils
+package core
 
 import (
 	"fmt"
@@ -86,7 +86,8 @@ func sliceToMapOfObjects(currentPath PropPath, sliceKind reflect.Kind, slice []i
 		// controlling that we have an ID to identify the objects in the map
 		idProp := options.GetIDProp(currentPath)
 		if idProp == nil {
-			return nil, fmt.Errorf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath)
+			return nil, fmt.Errorf("Cannot compare the arrays at path '%s' (%s) since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)",
+				currentPath, currentPathValue)
 		}
 
 		// // do we need to sort here ?
@@ -181,7 +182,8 @@ func sliceToMapOfMaps(currentPath PropPath, slice []map[string]interface{}, opti
 	// controlling that we have an ID to identify the objects in the map
 	idProp := options.GetIDProp(currentPath)
 	if idProp == nil {
-		return nil, fmt.Errorf("Cannot compare the arrays at path '%s' since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)", currentPath)
+		return nil, fmt.Errorf("Cannot compare the arrays at path '%s' (%s) since no ID property has been provided to uniquely identify the objects within (cf. -idprops option)",
+			currentPath, currentPathValue)
 	}
 
 	// // do we need to sort here ?

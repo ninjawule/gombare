@@ -1,4 +1,4 @@
-package utils
+package core
 
 import (
 	"fmt"
@@ -46,11 +46,24 @@ const (
 )
 
 //------------------------------------------------------------------------------
+// The properties
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
 // Identifying paths in a data tree
 //------------------------------------------------------------------------------
 
 // the path for any property in the data trees we consider
 type PropPath string
+
+// // the path for any property in the data trees we consider
+// type PropPath struct {
+// 	name          string
+// 	selectorName  string
+// 	selectorValue string
+// }
+
+// func newPropPath(string)
 
 func (thisPath PropPath) To(key string) PropPath {
 	return PropPath(string(thisPath) + ">" + key)
@@ -59,6 +72,11 @@ func (thisPath PropPath) To(key string) PropPath {
 func (thisPath PropPath) With(idProp *IDProp) PropPath {
 	return thisPath + ">" + idProp.getIdPartAsPath()
 }
+
+// >data>addressbook>contact:::contract>general>uid+contract>creationDate : ObjectIdentifier
+// >data>addressbook>contact                                              : ObjectPath
+// data                                                                   : Property
+// contract>general>uid+contract>creationDate                             : IdentifierPath (maybe not needed here)
 
 //------------------------------------------------------------------------------
 // Identifying objects in a data tree
