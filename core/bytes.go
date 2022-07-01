@@ -28,7 +28,7 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions) (Comparison
 		}
 
 		// using the right comparison function, between 2 objects in general
-		return compareMaps("", map1, map2, options, "", false)
+		return compareMaps(options.idParams, map1, map2, options, "", false)
 	}
 
 	// handling the JSON unmarshalling
@@ -43,5 +43,5 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions) (Comparison
 	}
 
 	// using the right comparison function, between 2 objects in general
-	return compareObjects("", obj1, obj2, options, "")
+	return compareObjects(options.idParams, obj1, obj2, options, "")
 }

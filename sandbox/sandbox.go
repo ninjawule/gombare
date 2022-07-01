@@ -3,7 +3,7 @@ package main
 import "encoding/json"
 
 func main() {
-
+	//nolint
 	data := `{
 		"_for": {
 			"data": {
@@ -18,15 +18,17 @@ func main() {
 							
 							"ensemble": {
 	
-								"when": [{"prop": "type", "is": "BVM", 
-									"look": [{"composant": {"when": [{"prop": "@organe", "is": "BV", 
-										"look": [{"propriete": {"when": [{"prop": "@operation", "is": "TBOIT",
-											"_use": ["#text"]}]}}]}]}}]}],
+								"when": [
+									{"prop": "@type","is": "BVM",
+										"look": [{"at": "composant", "when": [{"prop": "@organe", "is": "BV",
+											"look": [{"at": "propriete", "when": [{"prop": "@operation","is": "TBOIT",
+												"_use": ["#text"]}]}]}]}]}
+								],
 	
 								"look":[
-									{".": {"_use": ["@type"]}},
-									{"date": {"_use": ["datedebut", "datefin"]}},
-									{"critere": {"_use": ["datedebut", "datefin"]}}],
+									{"at":".", "_use": ["@type"]},
+									{"at":"date", "_use": ["datedebut", "datefin"]},
+									{"at":"critere", "_use": ["datedebut", "datefin"]}],
 	
 								"_for": {
 									"composant": {
@@ -57,26 +59,16 @@ func main() {
 		panic(err2)
 	}
 
-	param2 := &IdentificationParameter{}
-	if err3 := json.Unmarshal(dataBytes, param2); err3 != nil {
-		panic(err3)
-	}
-
-	dataBytes2, err4 := json.MarshalIndent(param2, "", "	")
-	if err4 != nil {
-		panic(err4)
-	}
-
 	//nolint
-	println(string(dataBytes2))
+	println(string(dataBytes))
 }
 
 type IdentificationParameter struct {
-	Path string                                `json:"path,omitempty"`
-	Use  []string                              `json:"_use,omitempty"`
-	When []*ConditionalIDParameter             `json:"when,omitempty"`
-	Look []map[string]*IdentificationParameter `json:"look,omitempty"` // array of 1 pair of key-value
-	For  map[string]*IdentificationParameter   `json:"_for,omitempty"`
+	At   string                              `json:"at,omitempty"`
+	Use  []string                            `json:"_use,omitempty"`
+	When []*ConditionalIDParameter           `json:"when,omitempty"`
+	Look []*IdentificationParameter          `json:"look,omitempty"` // array of 1 pair of key-value
+	For  map[string]*IdentificationParameter `json:"_for,omitempty"`
 }
 
 type ConditionalIDParameter struct {

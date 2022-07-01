@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// reading the arguments
-	var one, two, idPropsString, outdir, orderByString string
+	var one, two, idParamsString, outdir, ignoreString string
 
 	var xml, split, autoIndex, fast, silent, stopAtFirst bool
 
@@ -21,10 +21,8 @@ func main() {
 		"required: the path to the second file to compare; must be of the same first file's type")
 	flag.BoolVar(&xml, "xml", false,
 		"use this option if the files are XML files")
-	flag.StringVar(&idPropsString, "idprops", "",
-		"for an array of objects, we need an identifying property for the objects, for sorting purposes amongst other things; "+
-			"if '#index' is used as an ID, then that means that an object's index in the surrounding array is used as its ID; "+
-			"example: \">path1>path2>path3:::propA+path4>propB as id3,>path1>path2>path3>id3>path5:::propC\"")
+	flag.StringVar(&idParamsString, "idparams", "",
+		"a JSON representation of a IdentificationParameter parameter; see the docs for an example; can be the path to an existing JSON file")
 	flag.StringVar(&outdir, "outdir", "",
 		"when specified, the result is written out as a JSON into this specified output directory")
 	flag.BoolVar(&split, "split", false,
@@ -35,10 +33,9 @@ func main() {
 		"if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user; WARNING: this can lead to missing some differences!")
 	flag.BoolVar(&silent, "silent", false,
 		"if true, then no info / warning message is written out")
-	flag.StringVar(&orderByString, "orderby", "",
-		"for an array of objects that we cannot really define an ID property for, we want to sort the objects before comparing them with their index. The syntax is the same as for the -idprops option")
 	flag.BoolVar(&stopAtFirst, "stopAtFirst", false,
 		"if true, then, when comparing folders, we stop at the first couple of files that differ")
+	flag.StringVar(&ignoreString, "ignore", "", "the ID keys that should be ignored when they're duplicates: key1;key2;...;keyN")
 
 	flag.Parse()
 
@@ -49,7 +46,7 @@ func main() {
 	}
 
 	// the comparison options
-	options := c.NewOptions(xml, idPropsString, autoIndex, orderByString, fast, silent, stopAtFirst)
+	options := c.NewOptions(xml, idParamsString, autoIndex, fast, ignoreString, silent, stopAtFirst)
 
 	// checking the nature of the inputs
 	//nolint:ifshort

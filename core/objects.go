@@ -12,7 +12,8 @@ import (
 
 // compareObjects : comparing 2 objects in general - they can be maps, slices, or simple types
 //nolint:cyclop,gocyclo
-func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue PropPath) (Comparison, error) {
+// func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue PropPath) (Comparison, error) {
+func compareObjects(idParam *IdentificationParameter, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
 	// considering the kind for the two objects to compare
 	obj1Kind := reflect.ValueOf(obj1).Kind()
 	obj2Kind := reflect.ValueOf(obj2).Kind()
@@ -41,28 +42,28 @@ func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *Compa
 		if obj1Kind == reflect.Slice { // here, we assume that obj1 is a slice of objects of the same kind as the single object obj2; but this could fail!
 			switch obj2Kind {
 			case reflect.String:
-				return compareSlicesOfStrings(currentPath, obj1.([]string), []string{obj2.(string)}, options, currentPathValue)
+				return compareSlicesOfStrings(idParam, obj1.([]string), []string{obj2.(string)}, options, currentPathValue)
 			case reflect.Map:
-				return compareSlicesOfMaps(currentPath, obj1.([]map[string]interface{}), []map[string]interface{}{obj2.(map[string]interface{})}, options, currentPathValue)
+				return compareSlicesOfMaps(idParam, obj1.([]map[string]interface{}), []map[string]interface{}{obj2.(map[string]interface{})}, options, currentPathValue)
 			default:
-				return compareSlicesOfObjects(currentPath, obj1.([]interface{}), []interface{}{obj2}, options, currentPathValue)
+				return compareSlicesOfObjects(idParam, obj1.([]interface{}), []interface{}{obj2}, options, currentPathValue)
 			}
 		}
 
 		if obj2Kind == reflect.Slice { // here, we assume that obj2 is a slice of objects of the same kind as the single object obj1; but this could fail!
 			switch obj1Kind {
 			case reflect.String:
-				return compareSlicesOfStrings(currentPath, []string{obj1.(string)}, obj2.([]string), options, currentPathValue)
+				return compareSlicesOfStrings(idParam, []string{obj1.(string)}, obj2.([]string), options, currentPathValue)
 			case reflect.Map:
-				return compareSlicesOfMaps(currentPath, []map[string]interface{}{obj1.(map[string]interface{})}, obj2.([]map[string]interface{}), options, currentPathValue)
+				return compareSlicesOfMaps(idParam, []map[string]interface{}{obj1.(map[string]interface{})}, obj2.([]map[string]interface{}), options, currentPathValue)
 			default:
-				return compareSlicesOfObjects(currentPath, []interface{}{obj1}, obj2.([]interface{}), options, currentPathValue)
+				return compareSlicesOfObjects(idParam, []interface{}{obj1}, obj2.([]interface{}), options, currentPathValue)
 			}
 		}
 
 		// in any other case, we cannot go any further in the comparison (for now, maybe we'll evolve that later)
 		return nil, fmt.Errorf("Issue at path '%s' (%s): type of object '%s' in the first file VS type of object '%s' in the second file\n%v\n\nVS\n\n%s\n\n%s",
-			currentPath, currentPathValue, obj1Kind, obj2Kind, obj1, obj2, debug.Stack())
+			idParam, currentPathValue, obj1Kind, obj2Kind, obj1, obj2, debug.Stack())
 	}
 
 	// now, we can deal with our objects, depending on their type
@@ -85,17 +86,17 @@ func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *Compa
 	case reflect.Slice:
 		switch obj1.(type) {
 		case []interface{}:
-			return compareSlicesOfObjects(currentPath, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
+			return compareSlicesOfObjects(idParam, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
 		case []map[string]interface{}:
-			return compareSlicesOfMaps(currentPath, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
+			return compareSlicesOfMaps(idParam, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
 		}
 
 	case reflect.Map:
-		return compareMaps(currentPath, obj1.(map[string]interface{}), obj2.(map[string]interface{}), options, currentPathValue, false)
+		return compareMaps(idParam, obj1.(map[string]interface{}), obj2.(map[string]interface{}), options, currentPathValue, false)
 
 	default:
 		// this should never happen
-		return nil, fmt.Errorf("Issue at path '%s' : type '%s' is not handled", currentPath, obj1Kind)
+		return nil, fmt.Errorf("Issue at path '%s' : type '%s' is not handled", idParam, obj1Kind)
 	}
 
 	// we still return a void comparison to avoid nil exceptions
