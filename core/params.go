@@ -130,21 +130,20 @@ const (
 	sepPLUS     = "+"
 	sepPIPE     = "|"
 	currentPATH = "."
-	removeNOPE  = "nope"
 )
 
 //buildUniqueKey tries to build a unique key for the given object, according to what's configured on the given ID param
-func (thisParam *IdentificationParameter) BuildUniqueKey(obj map[string]interface{}) (result string) {
-	return thisParam.doBuildUniqueKey(obj, 0)
+func (thisParam *IdentificationParameter) BuildUniqueKey(obj map[string]interface{}, index int) (result string) {
+	return thisParam.doBuildUniqueKey(obj, index)
 }
 
 //nolint:gocognit,gocyclo,cyclop
-func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interface{}, depth int) (result string) {
+func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interface{}, index int) (result string) {
 	// handling the particular cases specificied in the "when"
 	if len(thisParam.When) > 0 {
 		for _, condition := range thisParam.When {
 			if condition.isVerifiedBy(obj) {
-				result = concatSeparatedString(condition.Name, sepPLUS, condition.doBuildUniqueKey(obj, depth+1))
+				result = concatSeparatedString(condition.Name, sepPLUS, condition.doBuildUniqueKey(obj, index))
 
 				goto End
 			}
@@ -154,40 +153,7 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 	// using the "use" if there's one
 	if len(thisParam.Use) > 0 {
 		for _, prop := range thisParam.Use {
-			switch value, ok := obj[prop]; value.(type) {
-			case float64:
-				//nolint:errcheck
-				floatValue := value.(float64)
-				if floatValue == float64(int(floatValue)) {
-					result = concatSeparatedString(result, sepPLUS, strconv.Itoa(int(floatValue)))
-				} else {
-					//nolint:revive, gomnd
-					result = concatSeparatedString(result, sepPLUS, strconv.FormatFloat(floatValue, 'f', 6, 64))
-				}
-
-			case string:
-				result = concatSeparatedString(result, sepPLUS, value.(string))
-
-			case bool:
-				if value.(bool) {
-					result = concatSeparatedString(result, sepPLUS, "true")
-				} else {
-					result = concatSeparatedString(result, sepPLUS, "false")
-				}
-
-			default:
-				// if we have a nil value at the intended path, we still use it
-				if value == nil {
-					if ok { // the value was present
-						result = concatSeparatedString(result, sepPLUS, thisParam.At)
-					} else { // the value was missing
-						result = concatSeparatedString(result, sepPLUS, "("+thisParam.At+")")
-					}
-				} else {
-					panic(fmt.Errorf("Cannot handle the value (of type: %T) at path '%s' (which is part of this id property: %s:::%s - or: %v). Value = %v",
-						value, thisParam.At, removeNOPE, removeNOPE, removeNOPE, value))
-				}
-			}
+			result = concatSeparatedString(result, sepPLUS, thisParam.getStringValueFromObj(obj, prop, index))
 		}
 
 		if !thisParam.conditional && result == "" {
@@ -203,7 +169,7 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 		// we're looking at our current object itself
 		if idParam.At == currentPATH {
 			//
-			result = concatSeparatedString(result, sepPLUS, idParam.doBuildUniqueKey(obj, depth+1))
+			result = concatSeparatedString(result, sepPLUS, idParam.doBuildUniqueKey(obj, index))
 			//
 		} else {
 			// if we're not using the current object at path ".", then let's go deeper
@@ -211,13 +177,13 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 
 			case map[string]interface{}:
 				// we're "descending" into an object here
-				result = concatSeparatedString(result, sepPLUS, idParam.doBuildUniqueKey(target.(map[string]interface{}), depth+1))
+				result = concatSeparatedString(result, sepPLUS, idParam.doBuildUniqueKey(target.(map[string]interface{}), index))
 
 			case []map[string]interface{}:
 				// now, we're building a key from an array of objects, hurraaay
 				values := []string{}
 				for _, targetItem := range target.([]map[string]interface{}) {
-					key := idParam.doBuildUniqueKey(targetItem, depth+1)
+					key := idParam.doBuildUniqueKey(targetItem, index)
 					if key != "" || !idParam.conditional {
 						values = append(values, key)
 					}
@@ -233,13 +199,13 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 				// if we have a nil value at the intended path, we still use it
 				if target == nil {
 					if ok { // the value was present
-						result = concatSeparatedString(result, sepPLUS, idParam.At)
+						result = concatSeparatedString(result, sepPLUS, idParam.At+"empty ??")
 					} else { // the value was missing
 						result = concatSeparatedString(result, sepPLUS, "("+idParam.At+")")
 					}
 				} else {
-					panic(fmt.Errorf("Cannot handle the object (of type: %T) at path '%s' (which is part of this id property: %s:::%s - or: %v). Value = %v",
-						target, thisParam.At, removeNOPE, removeNOPE, removeNOPE, target))
+					panic(fmt.Errorf("Cannot handle the OBJECT (of type: %T) at path '%s' (which is part of this id param: %v). Value = %v",
+						target, thisParam.At, thisParam.String(), target))
 				}
 			}
 		}
@@ -269,4 +235,49 @@ func concatSeparatedString(val1, sep, val2 string) string {
 	}
 
 	return val1 + sep + val2
+}
+
+func (thisParam *IdentificationParameter) getStringValueFromObj(obj map[string]interface{}, prop string, index int) string {
+	if prop == idParamINDEX {
+		return fmt.Sprintf("#%d", index+1)
+	}
+
+	switch value, ok := obj[prop]; value.(type) {
+	case float64:
+		//nolint:errcheck
+		floatValue := value.(float64)
+		if floatValue == float64(int(floatValue)) {
+			return strconv.Itoa(int(floatValue))
+		}
+		//nolint:revive, gomnd
+		return strconv.FormatFloat(floatValue, 'f', 6, 64)
+
+	case string:
+		return value.(string)
+
+	case bool:
+		if value.(bool) {
+			return "true"
+		}
+
+		return "false"
+
+	case map[string]interface{}:
+		// a f*cked up case: we expect to get a tag's value, but if this tag unexpectedly contains attributes,
+		// then go creates a map for it, and stores the value with the "#text" key
+		return thisParam.getStringValueFromObj(value.(map[string]interface{}), "#text", index)
+
+	default:
+		// if we have a nil value at the intended path, we still use it
+		if value == nil {
+			if ok { // the value was present
+				return prop
+			}
+			// the value was missing
+			return "(" + prop + ")"
+		}
+
+		panic(fmt.Errorf("Cannot handle the VALUE (of type: %T) at path '%s', for prop '%s' (which is part of this id param: %s). Value = %v",
+			value, thisParam.At, prop, thisParam.String(), value))
+	}
 }

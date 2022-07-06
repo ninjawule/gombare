@@ -88,6 +88,10 @@ func compareObjects(idParam *IdentificationParameter, obj1, obj2 interface{}, op
 		case []interface{}:
 			return compareSlicesOfObjects(idParam, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
 		case []map[string]interface{}:
+			if idParam == nil {
+				panic(fmt.Errorf("No id param at path '%s'. Currently compared slices of maps: \n\nslice 1:%v\n\nslice 2:%v", currentPathValue, obj1, obj2))
+			}
+
 			return compareSlicesOfMaps(idParam, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
 		}
 

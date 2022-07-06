@@ -100,8 +100,8 @@ func sliceToMapOfObjects(idParam *IdentificationParameter, sliceKind reflect.Kin
 		}
 
 		// or... using the value targeted by the ID property for each object as its ID
-		for _, object := range slice {
-			key := idParam.BuildUniqueKey(object.(map[string]interface{}))
+		for index, object := range slice {
+			key := idParam.BuildUniqueKey(object.(map[string]interface{}), index)
 			if key == "" {
 				return nil, fmt.Errorf("Comparison cannot be done: there is 1 object with an empty key at path '%s' (%s)", idParam, currentPathValue)
 			}
@@ -193,8 +193,8 @@ func sliceToMapOfMaps(idParam *IdentificationParameter, slice []map[string]inter
 	}
 
 	// or... using the value targeted by the ID property for each object as its ID
-	for _, mapInSlice := range slice {
-		key := idParam.BuildUniqueKey(mapInSlice)
+	for index, mapInSlice := range slice {
+		key := idParam.BuildUniqueKey(mapInSlice, index)
 		if key == "" {
 			return nil, fmt.Errorf("Comparison cannot be done: there is 1 object with an empty key at path '%s' (%s)", idParam, currentPathValue)
 		}
