@@ -44,11 +44,6 @@ func compareMaps(idParam *IdentificationParameter, map1, map2 map[string]interfa
 			nextIdParam = idParam.For[key1]
 		}
 
-		// // TODO remove ??
-		// if nextIdParam == nil {
-		// 	panic(fmt.Sprintf("no ID param for key '%s' from '%s'. Object1: \n\n%v\n\nObject2: \n\n%v", key1, currentPathValue, obj1, obj2))
-		// }
-
 		// obj1 and obj2 should be compared
 		compObj1Obj2, errComp := compareObjects(nextIdParam, obj1, obj2, options, nextPathValue)
 		if errComp != nil {

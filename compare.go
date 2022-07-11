@@ -35,7 +35,7 @@ func main() {
 		"if true, then no info / warning message is written out")
 	flag.BoolVar(&stopAtFirst, "stopAtFirst", false,
 		"if true, then, when comparing folders, we stop at the first couple of files that differ")
-	flag.StringVar(&ignoreString, "ignore", "", "the ID keys that should be ignored when they're duplicates: key1;key2;...;keyN")
+	flag.StringVar(&ignoreString, "ignore", "", "the ID keys that should be ignored when they're duplicates: key1:valA~valB~valC;key2:valD~valE")
 
 	flag.Parse()
 
@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// the comparison options
-	options := c.NewOptions(xml, idParamsString, autoIndex, fast, ignoreString, silent, stopAtFirst)
+	options := c.NewOptions(xml, idParamsString, autoIndex, fast, ignoreString, silent, stopAtFirst).SetDefaultLogger()
 
 	// checking the nature of the inputs
 	//nolint:ifshort
@@ -65,7 +65,7 @@ func main() {
 
 	// comparing 2 files, or 2 folders
 	if !oneDir {
-		comparison, errComp = c.CompareFiles(one, two, options)
+		comparison, errComp = c.CompareFiles(one, two, options, true)
 	} else {
 		comparison, errComp = c.CompareFolders(one, two, options)
 	}

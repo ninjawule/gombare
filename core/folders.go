@@ -65,7 +65,7 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 			}
 
 			// yes, the file exists, so we can compare the 2 files
-			compFile1File2, errComp := CompareFiles(path.Join(pathOne, fileName1), path.Join(pathTwo, fileName1), options)
+			compFile1File2, errComp := CompareFiles(path.Join(pathOne, fileName1), path.Join(pathTwo, fileName1), options, false)
 			if errComp != nil {
 				return nil, errComp
 			}

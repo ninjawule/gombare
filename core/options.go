@@ -12,17 +12,25 @@ import (
 //------------------------------------------------------------------------------
 
 type ComparisonOptions struct {
-	fileType    FileType                 // the type of the files we're comparing
-	idParams    *IdentificationParameter // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
-	autoIndex   bool                     // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-	fast        bool                     // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-	silent      bool                     // if true, then no info / warning message is written out
-	stopAtFirst bool                     // if true, then, when comparing folders, we stop at the first couple of files that differ
-	ignoredDups map[string]bool          // the duplicate keys we won't report
+	fileType    FileType                   // the type of the files we're comparing
+	idParams    *IdentificationParameter   // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
+	autoIndex   bool                       // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
+	fast        bool                       // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
+	silent      bool                       // if true, then no info / warning message is written out
+	stopAtFirst bool                       // if true, then, when comparing folders, we stop at the first couple of files that differ
+	ignoredDups map[string]map[string]bool // the duplicate keys we won't report
+	logger      Logger                     // a logger
 }
 
 func (thisComp *ComparisonOptions) GetFileType() FileType {
 	return thisComp.fileType
+}
+
+func (thisComp *ComparisonOptions) SetLogger(logger Logger) {
+	// not allowing the logger to be changed
+	if thisComp.logger == nil {
+		thisComp.logger = logger
+	}
 }
 
 // builds a new ComparisonOptions object
@@ -70,12 +78,34 @@ func getIdParamsFromString(idParamsString string) *IdentificationParameter {
 	return param
 }
 
-func getIgnoredDupsMap(ignoreString string) map[string]bool {
-	result := map[string]bool{}
+func getIgnoredDupsMap(ignoreString string) map[string]map[string]bool {
+	result := map[string]map[string]bool{}
 
-	for _, ignoredKey := range strings.Split(ignoreString, ";") {
-		result[ignoredKey] = true
+	if ignoreString != "" {
+		for _, ignoredPath := range strings.Split(ignoreString, ";") {
+			keyAndValues := strings.Split(strings.TrimSpace(ignoredPath), ":")
+
+			//nolint:gomnd
+			if len(keyAndValues) != 2 {
+				panic(fmt.Sprintf("this ignored path '%s' (in '%s') does not have the right format (key:val1~val2~etc)", ignoredPath, ignoreString))
+			}
+
+			values := map[string]bool{}
+			for _, value := range strings.Split(keyAndValues[1], "~") {
+				values[value] = true
+			}
+
+			result[keyAndValues[0]] = values
+		}
 	}
 
 	return result
+}
+
+func (thisComp *ComparisonOptions) isIgnoredDuplicate(realPath, value string) bool {
+	if ignoredPath := thisComp.ignoredDups[realPath]; ignoredPath != nil {
+		return ignoredPath[value]
+	}
+
+	return false
 }

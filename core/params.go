@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -188,9 +187,6 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 						values = append(values, key)
 					}
 				}
-
-				// making sure we'll build consistent keys
-				sort.Strings(values)
 
 				// let's not forget we might be looking at several objects here
 				result = concatSeparatedString(result, sepPLUS, strings.Join(values, sepPIPE))
