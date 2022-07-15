@@ -11,7 +11,8 @@ import (
 // since we need ordering - general slice case here
 //------------------------------------------------------------------------------
 
-func compareSlicesOfObjects(idParam *IdentificationParameter, slice1, slice2 []interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
+func compareSlicesOfObjects(orig1, orig2 map[string]interface{}, idParam *IdentificationParameter, slice1, slice2 []interface{},
+	options *ComparisonOptions, currentPathValue string) (Comparison, error) {
 	// handling empty
 	slice1Empty := len(slice1) == 0
 	slice2Empty := len(slice2) == 0
@@ -45,12 +46,12 @@ func compareSlicesOfObjects(idParam *IdentificationParameter, slice1, slice2 []i
 
 	var errTransfo error
 
-	if map1, errTransfo = sliceToMapOfObjects(1, idParam, slice1Kind, slice1, options, currentPathValue); errTransfo != nil {
+	if map1, errTransfo = sliceToMapOfObjects(1, orig1, idParam, slice1Kind, slice1, options, currentPathValue); errTransfo != nil {
 		return nil, errTransfo
 	}
 
 	//nolint:gomnd
-	if map2, errTransfo = sliceToMapOfObjects(2, idParam, slice2Kind, slice2, options, currentPathValue); errTransfo != nil {
+	if map2, errTransfo = sliceToMapOfObjects(2, orig2, idParam, slice2Kind, slice2, options, currentPathValue); errTransfo != nil {
 		return nil, errTransfo
 	}
 
@@ -59,7 +60,7 @@ func compareSlicesOfObjects(idParam *IdentificationParameter, slice1, slice2 []i
 }
 
 //nolint:cyclop,gocyclo,gocognit
-func sliceToMapOfObjects(file int, idParam *IdentificationParameter, sliceKind reflect.Kind, slice []interface{}, options *ComparisonOptions, currentPathValue string) (map[string]interface{}, error) {
+func sliceToMapOfObjects(file int, orig map[string]interface{}, idParam *IdentificationParameter, sliceKind reflect.Kind, slice []interface{}, options *ComparisonOptions, currentPathValue string) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	switch sliceKind {
@@ -84,18 +85,11 @@ func sliceToMapOfObjects(file int, idParam *IdentificationParameter, sliceKind r
 		}
 
 	case reflect.Map: // building a map of objects, using their id prop as keys
-		// special case where we use the slice elements' indexes as keys for the map we're building
-		if idParam.isIndex() {
-			for i, objInSlice := range slice {
-				result[fmt.Sprintf("#%d", i+1)] = objInSlice
-			}
+		// using the value targeted by the ID property for each object as its ID
+		for _, object := range slice {
+			key := idParam.BuildUniqueKey(orig, object.(map[string]interface{}))
 
-			return result, nil
-		}
-
-		// or... using the value targeted by the ID property for each object as its ID
-		for index, object := range slice {
-			key := idParam.BuildUniqueKey(object.(map[string]interface{}), index)
+			// we should never up with an empty key
 			if key == "" {
 				return nil, fmt.Errorf("Comparison of the 2 slices of OBJECTSs cannot be done: there is 1 object with an empty key at path '%s' in file %d (%s)",
 					idParam, file, currentPathValue)
@@ -125,7 +119,7 @@ func sliceToMapOfObjects(file int, idParam *IdentificationParameter, sliceKind r
 		matrixAsSlice := matrixToSlice(slice)
 		matrixCellKind := reflect.ValueOf(matrixAsSlice[0]).Kind()
 
-		return sliceToMapOfObjects(file, idParam, matrixCellKind, matrixAsSlice, options, currentPathValue)
+		return sliceToMapOfObjects(file, orig, idParam, matrixCellKind, matrixAsSlice, options, currentPathValue)
 
 	default:
 		// this should never happen
@@ -139,7 +133,8 @@ func sliceToMapOfObjects(file int, idParam *IdentificationParameter, sliceKind r
 // Here we specifically compare slices of maps
 //------------------------------------------------------------------------------
 
-func compareSlicesOfMaps(idParam *IdentificationParameter, slice1, slice2 []map[string]interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
+func compareSlicesOfMaps(orig1, orig2 map[string]interface{}, idParam *IdentificationParameter, slice1, slice2 []map[string]interface{},
+	options *ComparisonOptions, currentPathValue string) (Comparison, error) {
 	// handling empty
 	slice1Empty := len(slice1) == 0
 	slice2Empty := len(slice2) == 0
@@ -163,12 +158,12 @@ func compareSlicesOfMaps(idParam *IdentificationParameter, slice1, slice2 []map[
 
 	var errTransfo error
 
-	if map1, errTransfo = sliceToMapOfMaps(1, idParam, slice1, options, currentPathValue); errTransfo != nil {
+	if map1, errTransfo = sliceToMapOfMaps(1, orig1, idParam, slice1, options, currentPathValue); errTransfo != nil {
 		return nil, errTransfo
 	}
 
 	//nolint:gomnd
-	if map2, errTransfo = sliceToMapOfMaps(2, idParam, slice2, options, currentPathValue); errTransfo != nil {
+	if map2, errTransfo = sliceToMapOfMaps(2, orig2, idParam, slice2, options, currentPathValue); errTransfo != nil {
 		return nil, errTransfo
 	}
 
@@ -176,20 +171,14 @@ func compareSlicesOfMaps(idParam *IdentificationParameter, slice1, slice2 []map[
 	return compareMaps(idParam, map1, map2, options, currentPathValue, true)
 }
 
-func sliceToMapOfMaps(file int, idParam *IdentificationParameter, slice []map[string]interface{}, options *ComparisonOptions, currentPathValue string) (map[string]interface{}, error) {
+func sliceToMapOfMaps(file int, orig map[string]interface{}, idParam *IdentificationParameter, slice []map[string]interface{}, options *ComparisonOptions, currentPathValue string) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
-	// using the slice elements' indexes as keys ?
-	if idParam.isIndex() {
-		for i, mapInSlice := range slice {
-			result[fmt.Sprintf("#%d", i+1)] = mapInSlice
-		}
 
-		return result, nil
-	}
+	// using the value targeted by the ID property for each object as its ID
+	for _, mapInSlice := range slice {
+		key := idParam.BuildUniqueKey(orig, mapInSlice)
 
-	// or... using the value targeted by the ID property for each object as its ID
-	for index, mapInSlice := range slice {
-		key := idParam.BuildUniqueKey(mapInSlice, index)
+		// we should never up with an empty key
 		if key == "" {
 			return nil, fmt.Errorf("Comparison of the 2 slices of MAPs cannot be done: there is 1 object with an empty key at path '%s' in file %d (%s)",
 				idParam, file, currentPathValue)

@@ -70,5 +70,5 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 	}
 
 	// using the right comparison function, between 2 objects in general
-	return compareObjects(options.idParams, obj1, obj2, options, "")
+	return compareObjects(nil, nil, options.idParams, obj1, obj2, options, "")
 }

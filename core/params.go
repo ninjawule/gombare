@@ -12,12 +12,13 @@ import (
 
 // IdentificationParameter allows to recursively describe how to identity the entities within arrays in a data tree
 type IdentificationParameter struct {
-	At   string                              `json:"at,omitempty"`
-	Use  []string                            `json:"_use,omitempty"`
-	When []*ConditionalIDParameter           `json:"when,omitempty"`
-	Look []*IdentificationParameter          `json:"look,omitempty"`
-	For  map[string]*IdentificationParameter `json:"_for,omitempty"`
-	Name string                              `json:"name,omitempty"`
+	At   string                              `json:"at,omitempty"`   // the relative path at which to use this identification parameter
+	Use  []string                            `json:"_use,omitempty"` // which simple properties to concatenate to form a key
+	Incr bool                                `json:"incr,omitempty"` // if true, then any key built with this ID param is augmented with a counter of its occurrences
+	When []*ConditionalIDParameter           `json:"when,omitempty"` // when to apply this identification parameter, and what to do (_use, look, or when ?)
+	Look []*IdentificationParameter          `json:"look,omitempty"` // which relationships to look into
+	For  map[string]*IdentificationParameter `json:"_for,omitempty"` // how to deal with the embedded objects from this place
+	Name string                              `json:"name,omitempty"` // a name for this ID parameter, that may be used as a prefix for the keys built here
 
 	// technical properties
 	parent      *IdentificationParameter
@@ -30,14 +31,6 @@ type ConditionalIDParameter struct {
 	Prop string `json:"prop,omitempty"`
 	Is   string `json:"is,omitempty"`
 	IdentificationParameter
-}
-
-const (
-	idParamINDEX = "#index"
-)
-
-func (thisParam *IdentificationParameter) isIndex() bool {
-	return len(thisParam.Use) == 1 && thisParam.Use[0] == idParamINDEX
 }
 
 var _ fmt.Stringer = (*IdentificationParameter)(nil)
@@ -132,17 +125,17 @@ const (
 )
 
 //buildUniqueKey tries to build a unique key for the given object, according to what's configured on the given ID param
-func (thisParam *IdentificationParameter) BuildUniqueKey(obj map[string]interface{}, index int) (result string) {
-	return thisParam.doBuildUniqueKey(obj, index)
+func (thisParam *IdentificationParameter) BuildUniqueKey(orig, obj map[string]interface{}) (result string) {
+	return thisParam.doBuildUniqueKey(orig, obj)
 }
 
 //nolint:gocognit,gocyclo,cyclop
-func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interface{}, index int) (result string) {
+func (thisParam *IdentificationParameter) doBuildUniqueKey(orig, obj map[string]interface{}) (result string) {
 	// handling the particular cases specificied in the "when"
 	if len(thisParam.When) > 0 {
 		for _, condition := range thisParam.When {
 			if condition.isVerifiedBy(obj) {
-				result = concatSeparatedString(condition.Name, sepPLUS, condition.doBuildUniqueKey(obj, index))
+				result = concatSeparatedString(condition.Name, sepPLUS, condition.doBuildUniqueKey(orig, obj))
 
 				goto End
 			}
@@ -152,7 +145,7 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 	// using the "use" if there's one
 	if len(thisParam.Use) > 0 {
 		for _, prop := range thisParam.Use {
-			result = concatSeparatedString(result, sepPLUS, thisParam.getStringValueFromObj(obj, prop, index))
+			result = concatSeparatedString(result, sepPLUS, thisParam.getStringValueFromObj(obj, prop))
 		}
 
 		if !thisParam.conditional && result == "" {
@@ -164,26 +157,26 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 	}
 
 	// else, "look"-ing for the complex case
-	for _, idParam := range thisParam.Look {
+	for _, nextIdParam := range thisParam.Look {
 		// we're looking at our current object itself
-		if idParam.At == currentPATH {
+		if nextIdParam.At == currentPATH {
 			//
-			result = concatSeparatedString(result, sepPLUS, idParam.doBuildUniqueKey(obj, index))
+			result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(orig, obj))
 			//
 		} else {
 			// if we're not using the current object at path ".", then let's go deeper
-			switch target, ok := obj[idParam.At]; target.(type) {
+			switch target, ok := obj[nextIdParam.At]; target.(type) {
 
 			case map[string]interface{}:
 				// we're "descending" into an object here
-				result = concatSeparatedString(result, sepPLUS, idParam.doBuildUniqueKey(target.(map[string]interface{}), index))
+				result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(obj, target.(map[string]interface{})))
 
 			case []map[string]interface{}:
 				// now, we're building a key from an array of objects, hurraaay
 				values := []string{}
 				for _, targetItem := range target.([]map[string]interface{}) {
-					key := idParam.doBuildUniqueKey(targetItem, index)
-					if key != "" || !idParam.conditional {
+					key := nextIdParam.doBuildUniqueKey(obj, targetItem)
+					if key != "" || !nextIdParam.conditional {
 						values = append(values, key)
 					}
 				}
@@ -195,9 +188,9 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 				// if we have a nil value at the intended path, we still use it
 				if target == nil {
 					if ok { // the value was present
-						result = concatSeparatedString(result, sepPLUS, idParam.At+"empty ??")
+						result = concatSeparatedString(result, sepPLUS, nextIdParam.At+"empty ??")
 					} else { // the value was missing
-						result = concatSeparatedString(result, sepPLUS, "("+idParam.At+")")
+						result = concatSeparatedString(result, sepPLUS, "("+nextIdParam.At+")")
 					}
 				} else {
 					panic(fmt.Errorf("Cannot handle the OBJECT (of type: %T) at path '%s' (which is part of this id param: %v). Value = %v",
@@ -212,6 +205,11 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(obj map[string]interf
 	}
 
 End:
+
+	// handling the increment
+	if thisParam.Incr {
+		result = incrKey(orig, result)
+	}
 
 	return
 }
@@ -233,10 +231,7 @@ func concatSeparatedString(val1, sep, val2 string) string {
 	return val1 + sep + val2
 }
 
-func (thisParam *IdentificationParameter) getStringValueFromObj(obj map[string]interface{}, prop string, index int) string {
-	if prop == idParamINDEX {
-		return fmt.Sprintf("#%d", index+1)
-	}
+func (thisParam *IdentificationParameter) getStringValueFromObj(obj map[string]interface{}, prop string) string {
 
 	switch value, ok := obj[prop]; value.(type) {
 	case float64:
@@ -261,7 +256,7 @@ func (thisParam *IdentificationParameter) getStringValueFromObj(obj map[string]i
 	case map[string]interface{}:
 		// a f*cked up case: we expect to get a tag's value, but if this tag unexpectedly contains attributes,
 		// then go creates a map for it, and stores the value with the "#text" key
-		return thisParam.getStringValueFromObj(value.(map[string]interface{}), "#text", index)
+		return thisParam.getStringValueFromObj(value.(map[string]interface{}), "#text")
 
 	default:
 		// if we have a nil value at the intended path, we still use it
@@ -276,4 +271,19 @@ func (thisParam *IdentificationParameter) getStringValueFromObj(obj map[string]i
 		panic(fmt.Errorf("Cannot handle the VALUE (of type: %T) at path '%s', for prop '%s' (which is part of this id param: %s). Value = %v",
 			value, thisParam.At, prop, thisParam.String(), value))
 	}
+}
+
+const objINCREMENTS = "_increments_"
+
+func incrKey(obj map[string]interface{}, key string) string {
+	// init if needed
+	if obj[objINCREMENTS] == nil {
+		obj[objINCREMENTS] = map[string]int{}
+	}
+
+	// increment
+	obj[objINCREMENTS].(map[string]int)[key] = obj[objINCREMENTS].(map[string]int)[key] + 1
+
+	// formating
+	return fmt.Sprintf("%s#%d", key, obj[objINCREMENTS].(map[string]int)[key])
 }

@@ -13,7 +13,7 @@ import (
 // compareObjects : comparing 2 objects in general - they can be maps, slices, or simple types
 //nolint:cyclop,gocyclo
 // func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue PropPath) (Comparison, error) {
-func compareObjects(idParam *IdentificationParameter, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
+func compareObjects(orig1, orig2 map[string]interface{}, idParam *IdentificationParameter, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
 	// considering the kind for the two objects to compare
 	obj1Kind := reflect.ValueOf(obj1).Kind()
 	obj2Kind := reflect.ValueOf(obj2).Kind()
@@ -44,9 +44,9 @@ func compareObjects(idParam *IdentificationParameter, obj1, obj2 interface{}, op
 			case reflect.String:
 				return compareSlicesOfStrings(idParam, obj1.([]string), []string{obj2.(string)}, options, currentPathValue)
 			case reflect.Map:
-				return compareSlicesOfMaps(idParam, obj1.([]map[string]interface{}), []map[string]interface{}{obj2.(map[string]interface{})}, options, currentPathValue)
+				return compareSlicesOfMaps(orig1, orig2, idParam, obj1.([]map[string]interface{}), []map[string]interface{}{obj2.(map[string]interface{})}, options, currentPathValue)
 			default:
-				return compareSlicesOfObjects(idParam, obj1.([]interface{}), []interface{}{obj2}, options, currentPathValue)
+				return compareSlicesOfObjects(orig1, orig2, idParam, obj1.([]interface{}), []interface{}{obj2}, options, currentPathValue)
 			}
 		}
 
@@ -55,9 +55,9 @@ func compareObjects(idParam *IdentificationParameter, obj1, obj2 interface{}, op
 			case reflect.String:
 				return compareSlicesOfStrings(idParam, []string{obj1.(string)}, obj2.([]string), options, currentPathValue)
 			case reflect.Map:
-				return compareSlicesOfMaps(idParam, []map[string]interface{}{obj1.(map[string]interface{})}, obj2.([]map[string]interface{}), options, currentPathValue)
+				return compareSlicesOfMaps(orig1, orig2, idParam, []map[string]interface{}{obj1.(map[string]interface{})}, obj2.([]map[string]interface{}), options, currentPathValue)
 			default:
-				return compareSlicesOfObjects(idParam, []interface{}{obj1}, obj2.([]interface{}), options, currentPathValue)
+				return compareSlicesOfObjects(orig1, orig2, idParam, []interface{}{obj1}, obj2.([]interface{}), options, currentPathValue)
 			}
 		}
 
@@ -86,13 +86,13 @@ func compareObjects(idParam *IdentificationParameter, obj1, obj2 interface{}, op
 	case reflect.Slice:
 		switch obj1.(type) {
 		case []interface{}:
-			return compareSlicesOfObjects(idParam, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
+			return compareSlicesOfObjects(orig1, orig2, idParam, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
 		case []map[string]interface{}:
 			if idParam == nil {
 				panic(fmt.Errorf("No id param at path '%s'. Currently compared slices of maps: \n\nslice 1:%v\n\nslice 2:%v", currentPathValue, obj1, obj2))
 			}
 
-			return compareSlicesOfMaps(idParam, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
+			return compareSlicesOfMaps(orig1, orig2, idParam, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
 		}
 
 	case reflect.Map:
