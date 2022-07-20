@@ -11,8 +11,7 @@ import (
 //------------------------------------------------------------------------------
 
 // compareObjects : comparing 2 objects in general - they can be maps, slices, or simple types
-//nolint:cyclop,gocyclo
-// func compareObjects(currentPath PropPath, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue PropPath) (Comparison, error) {
+//nolint:cyclop,gocyclo,gocognit
 func compareObjects(orig1, orig2 map[string]interface{}, idParam *IdentificationParameter, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
 	// considering the kind for the two objects to compare
 	obj1Kind := reflect.ValueOf(obj1).Kind()
@@ -24,7 +23,15 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 
 	if obj1Nil != obj2Nil {
 		if obj1Nil {
+			if alias := idParam.getAlias(obj2); alias != "" {
+				return two(alias), nil
+			}
+
 			return two(obj2), nil
+		}
+
+		if alias := idParam.getAlias(obj1); alias != "" {
+			return one(alias), nil
 		}
 
 		return one(obj1), nil
@@ -63,7 +70,7 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 
 		// in any other case, we cannot go any further in the comparison (for now, maybe we'll evolve that later)
 		return nil, fmt.Errorf("Issue at path '%s' (%s): type of object '%s' in the first file VS type of object '%s' in the second file\n%v\n\nVS\n\n%s\n\n%s",
-			idParam, currentPathValue, obj1Kind, obj2Kind, obj1, obj2, debug.Stack())
+			idParam.toString(), currentPathValue, obj1Kind, obj2Kind, obj1, obj2, debug.Stack())
 	}
 
 	// now, we can deal with our objects, depending on their type
@@ -100,7 +107,7 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 
 	default:
 		// this should never happen
-		return nil, fmt.Errorf("Issue at path '%s' : type '%s' is not handled", idParam, obj1Kind)
+		return nil, fmt.Errorf("Issue at path '%s' : type '%s' is not handled", idParam.toString(), obj1Kind)
 	}
 
 	// we still return a void comparison to avoid nil exceptions

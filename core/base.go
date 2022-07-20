@@ -16,11 +16,11 @@ func nodif() Comparison {
 }
 
 func one(obj interface{}) Comparison {
-	return map[string]interface{}{"_one_": obj}
+	return map[string]interface{}{"_del_": obj}
 }
 
 func two(obj interface{}) Comparison {
-	return map[string]interface{}{"_two_": obj}
+	return map[string]interface{}{"_new_": obj}
 }
 
 func one_two(obj1, obj2 interface{}) Comparison {

@@ -7,6 +7,7 @@ import "sort"
 //------------------------------------------------------------------------------
 
 // compareMaps : getting a diff between 2 maps
+//nolint:gocognit,cyclop,gocyclo
 func compareMaps(idParam *IdentificationParameter, map1, map2 map[string]interface{}, options *ComparisonOptions, currentPathValue string, fromSlice bool) (Comparison, error) {
 	// the result from comparing the 2 maps
 	thisComparison := map[string]interface{}{}
@@ -25,7 +26,7 @@ func compareMaps(idParam *IdentificationParameter, map1, map2 map[string]interfa
 	// let's iterate over the first map, and see what we have in the second
 	for _, key1 := range keys1 {
 		// we're excluding some technical properties
-		if key1 != objINCREMENTS {
+		if key1 != objINCREMENTS && key1 != objALIAS {
 			//getting the corresponding object
 			obj1 := map1[key1]
 
@@ -70,7 +71,7 @@ func compareMaps(idParam *IdentificationParameter, map1, map2 map[string]interfa
 	// now let's iterate over the second map, because there might be stuff not found in the first map
 	for _, key2 := range keys2 {
 		// we're considering keys that have not been checked yet - still excluding some technical properties
-		if !checked[key2] && key2 != objINCREMENTS {
+		if !checked[key2] && key2 != objINCREMENTS && key2 != objALIAS {
 			// this is the full path of the particular object we'll compare to another
 			nextPathValue := currentPathValue + ">" + key2
 

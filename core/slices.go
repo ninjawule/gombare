@@ -38,7 +38,7 @@ func compareSlicesOfObjects(orig1, orig2 map[string]interface{}, idParam *Identi
 	// for now, we reject slices with heterogenous kinds
 	if slice1Kind != slice2Kind {
 		return nil, fmt.Errorf("Issue at path '%s' : type '[]%s' in the first file VS type '[]%s' in the second file.\n\n%v\n\nVS\n\n%v",
-			idParam, slice1Kind, slice2Kind, slice1, slice2)
+			idParam.toString(), slice1Kind, slice2Kind, slice1, slice2)
 	}
 
 	// transforming the slices to maps, to allow for map comparison
@@ -65,7 +65,7 @@ func sliceToMapOfObjects(file int, orig map[string]interface{}, idParam *Identif
 
 	switch sliceKind {
 	case reflect.Bool:
-		return nil, fmt.Errorf("Slices of %ss (like at path '%s') are not handled yet! Who use them anyway ??", sliceKind, idParam)
+		return nil, fmt.Errorf("Slices of %ss (like at path '%s') are not handled yet! Who use them anyway ??", sliceKind, idParam.toString())
 
 	case reflect.Float64: // building a map of floats (or integers), using their values as keys
 		for _, number := range slice {
@@ -92,20 +92,21 @@ func sliceToMapOfObjects(file int, orig map[string]interface{}, idParam *Identif
 			// we should never up with an empty key
 			if key == "" {
 				return nil, fmt.Errorf("Comparison of the 2 slices of OBJECTSs cannot be done: there is 1 object with an empty key at path '%s' in file %d (%s)",
-					idParam, file, currentPathValue)
+					idParam.toString(), file, currentPathValue)
 			}
 
 			if options.fast {
 				result[key] = object
 			} else {
-				if result[key] != nil && !options.isIgnoredDuplicate(currentPathValue, key) {
+				// if result[key] != nil && !options.isIgnoredDuplicate(currentPathValue, key) {
+				if result[key] != nil {
 					// if it's a real duplicate, then we have to warn about it
 					if fmt.Sprintf("%v", result[key]) == fmt.Sprintf("%v", object) {
 						// if reflect.DeepEqual(result[key], object) {
 						options.logger.Warn("There are 2 identical objects at path '%s' in file %d (with key '%s'): %v\n", currentPathValue, file, key, object)
 					} else {
 						return nil, fmt.Errorf("Comparison of the 2 slices of OBJECTs has failed: there is more than 1 object with key '%s' at path '%s'"+
-							" in file %d (%s)\n\nmap1: %v\n\nmap2: %v", key, idParam, file, currentPathValue, result[key], object)
+							" in file %d (%s)\n\nmap1: %v\n\nmap2: %v", key, idParam.toString(), file, currentPathValue, result[key], object)
 					}
 				}
 				result[key] = object
@@ -181,20 +182,21 @@ func sliceToMapOfMaps(file int, orig map[string]interface{}, idParam *Identifica
 		// we should never up with an empty key
 		if key == "" {
 			return nil, fmt.Errorf("Comparison of the 2 slices of MAPs cannot be done: there is 1 object with an empty key at path '%s' in file %d (%s)",
-				idParam, file, currentPathValue)
+				idParam.toString(), file, currentPathValue)
 		}
 
 		if options.fast {
 			result[key] = mapInSlice
 		} else {
-			if result[key] != nil && !options.isIgnoredDuplicate(currentPathValue, key) {
+			// if result[key] != nil && !options.isIgnoredDuplicate(currentPathValue, key) {
+			if result[key] != nil {
 				// if it's a real duplicate, then we have to warn about it
 				if fmt.Sprintf("%v", result[key]) == fmt.Sprintf("%v", mapInSlice) {
 					// if reflect.DeepEqual(result[key], mapInSlice) {
 					options.logger.Warn("There are 2 identical maps at path '%s' in file %d (with key '%s'): %v\n", currentPathValue, file, key, mapInSlice)
 				} else {
 					return nil, fmt.Errorf("Comparison of the 2 slices of MAPs has failed: there is more than 1 MAP with key '%s' at path '%s'"+
-						" in file %d (%s)\n\nmap1: %v\n\nmap2: %v", key, idParam, file, currentPathValue, result[key], mapInSlice)
+						" in file %d (%s)\n\nmap1: %v\n\nmap2: %v", key, idParam.toString(), file, currentPathValue, result[key], mapInSlice)
 				}
 			}
 			result[key] = mapInSlice

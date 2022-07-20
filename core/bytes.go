@@ -14,7 +14,6 @@ import (
 
 // compareBytes : comparing 2 slices of bytes containing the data for JSON or XML files
 func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool) (Comparison, error) {
-
 	// if the XML option is activated, we compare 2 XML files
 	if options.GetFileType() == FileTypeXML {
 		// handling the XML unmarshalling
