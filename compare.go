@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	c "github.com/ninjawule/json-compare/core"
+	c "github.com/ninjawule/gombare/core"
 )
 
 func main() {
