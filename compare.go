@@ -11,10 +11,8 @@ import (
 
 func main() {
 	// reading the arguments
-	// var one, two, idParamsString, outdir, ignoreString string
 	var one, two, idParamsString, outdir string
 
-	// var xml, split, autoIndex, fast, silent, stopAtFirst bool
 	var xml, fast, silent, stopAtFirst, check bool
 
 	flag.StringVar(&one, "one", "",
@@ -27,10 +25,6 @@ func main() {
 		"a JSON representation of a IdentificationParameter parameter; see the docs for an example; can be the path to an existing JSON file")
 	flag.StringVar(&outdir, "outdir", "",
 		"when specified, the result is written out as a JSON into this specified output directory")
-	// flag.BoolVar(&split, "split", false,
-	// 	"if 2 folders are compared, and if -outpir is used, then there's 1 comparison JSON produced for each pair of compared files")
-	// flag.BoolVar(&autoIndex, "autoIndex", false,
-	// 	"if true, then for array of objects with no id prop (cf. idprops option), the objects' indexes in the arrays are used as IDs")
 	flag.BoolVar(&fast, "fast", false,
 		"if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user; WARNING: this can lead to missing some differences!")
 	flag.BoolVar(&silent, "silent", false,
@@ -39,7 +33,6 @@ func main() {
 		"if true, then, when comparing folders, we stop at the first couple of files that differ")
 	flag.BoolVar(&check, "check", false,
 		"if true, then the ID params are output to allow for some checks")
-	// flag.StringVar(&ignoreString, "ignore", "", "the ID keys that should be ignored when they're duplicates: key1:valA~valB~valC;key2:valD~valE")
 
 	flag.Parse()
 
@@ -50,7 +43,6 @@ func main() {
 	}
 
 	// the comparison options
-	// options := c.NewOptions(xml, idParamsString, autoIndex, fast, ignoreString, silent, stopAtFirst).SetDefaultLogger()
 	options := c.NewOptions(xml, idParamsString, fast, silent, stopAtFirst, check).SetDefaultLogger()
 
 	// are we just performing a check ?

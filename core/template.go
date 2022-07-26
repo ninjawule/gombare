@@ -14,41 +14,95 @@ import (
 
 const objALIAS = "__alias__"
 
-func (thisParam *IdentificationParameter) getTpl() []string {
-	if len(thisParam.Tpl) > 0 {
-		return thisParam.Tpl
+func (thisParam *IdentificationParameter) getTpl1() []string {
+	if len(thisParam.Tpl1) > 0 {
+		return thisParam.Tpl1
 	}
 
-	if p := thisParam.parent; p != nil && p.toString() == thisParam.toString() && len(p.getTpl()) > 0 {
-		thisParam.Tpl = p.getTpl()
+	if p := thisParam.parent; p != nil && p.toString() == thisParam.toString() && len(p.getTpl1()) > 0 {
+		thisParam.Tpl1 = p.getTpl1()
 	}
 
-	return thisParam.Tpl
+	return thisParam.Tpl1
 }
 
-func (thisParam *IdentificationParameter) getTplString() string {
-	return strings.Join(thisParam.getTpl(), "")
+func (thisParam *IdentificationParameter) getTplN() []string {
+	if len(thisParam.TplN) > 0 {
+		return thisParam.TplN
+	}
+
+	if p := thisParam.parent; p != nil && p.toString() == thisParam.toString() && len(p.getTplN()) > 0 {
+		thisParam.TplN = p.getTplN()
+	}
+
+	if thisParam.TplN == nil {
+		thisParam.TplN = thisParam.getTpl1()
+	}
+
+	return thisParam.TplN
 }
 
-func (thisParam *IdentificationParameter) addAlias(obj map[string]interface{}) {
-	if thisParam.buildTpl == nil {
+func (thisParam *IdentificationParameter) getTpl1String() string {
+	return strings.Join(thisParam.getTpl1(), "")
+}
+
+func (thisParam *IdentificationParameter) getTplNString() string {
+	return strings.Join(thisParam.getTplN(), "")
+}
+
+func (thisParam *IdentificationParameter) addAlias1(obj map[string]interface{}, currentPathValue string) {
+	// not adding an alias twice
+	if obj[objALIAS] != nil {
+		return
+	}
+
+	// building the template, if not already done
+	if thisParam.buildTpl1 == nil {
 		var errParse error
-		if thisParam.buildTpl, errParse = template.New(thisParam.toString()).Funcs(template.FuncMap{
+		if thisParam.buildTpl1, errParse = template.New(thisParam.toString()).Funcs(template.FuncMap{
 			"Display": display,
-		}).Parse(thisParam.getTplString()); errParse != nil {
-			panic(fmt.Sprintf("Invalid template '%s' at path: %s. Cause: %s", thisParam.getTplString(), thisParam.toString(), errParse))
+			"Slice":   slice,
+		}).Parse(thisParam.getTpl1String()); errParse != nil {
+			panic(fmt.Sprintf("Invalid template '%s' at path: %s. Cause: %s", thisParam.getTpl1String(), thisParam.toString(), errParse))
 		}
 	}
 
 	var bytes bytes.Buffer
-	if errRender := thisParam.buildTpl.Execute(&bytes, obj); errRender != nil {
-		panic(fmt.Sprintf("Failed to apply template '%s' on object: %v. Cause: %s", thisParam.getTplString(), obj, errRender))
+	if errRender := thisParam.buildTpl1.Execute(&bytes, obj); errRender != nil {
+		panic(fmt.Sprintf("Failed to apply template '%s' on object (at path: %s): %v. Cause: %s", thisParam.getTpl1String(), currentPathValue, obj, errRender))
 	}
 
 	obj[objALIAS] = bytes.String()
 }
 
-func (thisParam *IdentificationParameter) getAlias(obj interface{}) string {
+func (thisParam *IdentificationParameter) addAliasN(objects []map[string]interface{}, currentPathValue string) {
+	// not adding an alias twice
+	if objects[0][objALIAS] != nil {
+		return
+	}
+
+	// building the template, if not already done
+	if thisParam.buildTplN == nil {
+		var errParse error
+		if thisParam.buildTplN, errParse = template.New(thisParam.toString()).Funcs(template.FuncMap{
+			"Display": display,
+			"Slice":   slice,
+		}).Parse(thisParam.getTplNString()); errParse != nil {
+			panic(fmt.Sprintf("Invalid template '%s' at path: %s. Cause: %s", thisParam.getTplNString(), thisParam.toString(), errParse))
+		}
+	}
+
+	for _, obj := range objects {
+		var bytes bytes.Buffer
+		if errRender := thisParam.buildTplN.Execute(&bytes, obj); errRender != nil {
+			panic(fmt.Sprintf("Failed to apply template '%s' on object (at path: %s): %v. Cause: %s", thisParam.getTplNString(), currentPathValue, obj, errRender))
+		}
+
+		obj[objALIAS] = bytes.String()
+	}
+}
+
+func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathValue string) string {
 	// we may already have an alias
 	switch obj := obj.(type) {
 	case map[string]interface{}:
@@ -58,10 +112,28 @@ func (thisParam *IdentificationParameter) getAlias(obj interface{}) string {
 		}
 
 		// or... we haven't had the occasion to build it yet - so we build it and return it right away
-		if thisParam != nil && len(thisParam.getTpl()) > 0 {
-			thisParam.addAlias(obj)
+		if thisParam != nil && len(thisParam.getTpl1()) > 0 {
+			thisParam.addAlias1(obj, currentPathValue)
 
 			return obj[objALIAS].(string)
+		}
+
+	case []map[string]interface{}:
+		_, ok := obj[0][objALIAS]
+		if ok {
+			aliases := []string{}
+			for _, elem := range obj {
+				aliases = append(aliases, elem[objALIAS].(string))
+			}
+
+			return strings.Join(aliases, " ### ")
+		}
+
+		// or... we haven't had the occasion to build it yet - so we build it and return it right away
+		if thisParam != nil && len(thisParam.getTplN()) > 0 {
+			thisParam.addAliasN(obj, currentPathValue)
+
+			return thisParam.getAlias(obj, currentPathValue)
 		}
 	}
 
@@ -141,4 +213,13 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 	default:
 		return fmt.Sprintf("[unhandled case; using default display here] %v", arg)
 	}
+}
+
+func slice(obj interface{}) interface{} {
+	switch obj := obj.(type) {
+	case []interface{}, []map[string]interface{}:
+		return obj
+	}
+
+	return []interface{}{obj}
 }

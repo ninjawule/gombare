@@ -40,7 +40,7 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 		}
 
 		// using the right comparison function, between 2 objects in general
-		return compareMaps(options.idParams, map1, map2, options, "", false)
+		return compareJsonEntities(options.idParams, entity(map1), entity(map2), options, "", false)
 	}
 
 	// handling the JSON unmarshalling

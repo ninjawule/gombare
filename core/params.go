@@ -13,18 +13,21 @@ import (
 type IdentificationParameter struct {
 	At       string                              `json:"at,omitempty"`   // the relative path at which to use this identification parameter
 	Use      []string                            `json:"_use,omitempty"` // which simple properties to concatenate to form a key
-	Tpl      []string                            `json:"_tpl,omitempty"` // a formattable string (Go template) to build an alias for an object, instead of outputting it completely in the comparison
+	Tpl1     []string                            `json:"tpl1,omitempty"` // a formattable string (Go template) to build an alias for an object, instead of outputting it completely in the comparison
+	TplN     []string                            `json:"tplN,omitempty"` // a formattable string (Go template) to build an alias for an object, instead of outputting it completely in the comparison
 	Incr     bool                                `json:"incr,omitempty"` // if true, then any key built with this ID param is augmented with a counter of its occurrences
 	When     []*ConditionalIDParameter           `json:"when,omitempty"` // when to apply this identification parameter, and what to do (_use, look, or when ?)
 	Look     []*IdentificationParameter          `json:"look,omitempty"` // which relationships to look into
 	For      map[string]*IdentificationParameter `json:"_for,omitempty"` // how to deal with the embedded objects from this place
 	Name     string                              `json:"name,omitempty"` // a name for this ID parameter, that may be used as a prefix for the keys built here
 	FullPath string                              `json:"path,omitempty"` // the relative path at which to use this identification parameter
+	Keep     bool                                `json:"keep,omitempty"` // if true, then, when comparing slice elements with this ID param, we're not clearing the identical elements before comparing the diverging ones
 
 	// technical properties
 	parent             *IdentificationParameter
 	isWhen             bool
-	buildTpl           *template.Template
+	buildTpl1          *template.Template
+	buildTplN          *template.Template
 	withinWhen         bool
 	withinWhenResolved bool
 }
@@ -86,7 +89,8 @@ func (thisParam *IdentificationParameter) doResolve(full bool) error {
 
 		if full {
 			subParam.toString()
-			subParam.getTpl()
+			subParam.getTpl1()
+			subParam.getTplN()
 		}
 
 		if err := subParam.doResolve(full); err != nil {
@@ -104,7 +108,8 @@ func (thisParam *IdentificationParameter) doResolve(full bool) error {
 
 		if full {
 			condition.toString()
-			condition.getTpl()
+			condition.getTpl1()
+			condition.getTplN()
 		}
 
 		if err := condition.doResolve(full); err != nil {
@@ -117,7 +122,8 @@ func (thisParam *IdentificationParameter) doResolve(full bool) error {
 
 		if full {
 			looked.toString()
-			looked.getTpl()
+			looked.getTpl1()
+			looked.getTplN()
 		}
 
 		if err := looked.doResolve(full); err != nil {
@@ -143,10 +149,10 @@ func (thisParam *IdentificationParameter) isWithinWhen() bool {
 }
 
 // isVerifiedBy returns true if the given object verifies this condition
-func (thisCondition *ConditionalIDParameter) isVerifiedBy(obj map[string]interface{}) bool {
-	if obj == nil {
+func (thisCondition *ConditionalIDParameter) isVerifiedBy(ent *JsonEntity) bool {
+	if ent == nil || len(ent.values) == 0 {
 		return false
 	}
 
-	return fmt.Sprintf("%v", obj[thisCondition.Prop]) == thisCondition.Is
+	return fmt.Sprintf("%v", ent.values[thisCondition.Prop]) == thisCondition.Is
 }

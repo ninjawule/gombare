@@ -59,3 +59,7 @@ func (thisLogger *defaultLogger) Debug(str string, params ...interface{}) {
 func (thisLogger *defaultLogger) Warn(str string, params ...interface{}) {
 	thisLogger.innerLogger.Warnf(str, params...)
 }
+
+// func doLog(str string, params ...interface{}) {
+// 	println(fmt.Sprintf(str, params...))
+// }

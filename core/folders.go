@@ -19,7 +19,7 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 	start := time.Now()
 
 	// the result from comparing the 2 folders
-	thisComparison := map[string]interface{}{}
+	thisComparison := Comparison{}
 
 	// listing the files within the 2 folders
 	filesOne, errList1 := listFilesToMap(pathOne)

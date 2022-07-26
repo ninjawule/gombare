@@ -14,20 +14,21 @@ const (
 	sepPLUS     = "~"
 	sepPIPE     = "|"
 	currentPATH = "."
+	parentPATH  = ".."
 )
 
 //buildUniqueKey tries to build a unique key for the given object, according to what's configured on the given ID param
-func (thisParam *IdentificationParameter) BuildUniqueKey(orig, obj map[string]interface{}) (result string) {
-	return thisParam.doBuildUniqueKey(orig, obj)
+func (thisParam *IdentificationParameter) BuildUniqueKey(ent *JsonEntity, currentPathValue string) (result string) {
+	return thisParam.doBuildUniqueKey(ent, currentPathValue)
 }
 
 //nolint:gocognit,gocyclo,cyclop
-func (thisParam *IdentificationParameter) doBuildUniqueKey(orig, obj map[string]interface{}) (result string) {
+func (thisParam *IdentificationParameter) doBuildUniqueKey(ent *JsonEntity, currentPathValue string) (result string) {
 	// handling the particular cases specificied in the "when"
 	if len(thisParam.When) > 0 {
 		for _, condition := range thisParam.When {
-			if condition.isVerifiedBy(obj) {
-				result = concatSeparatedString(condition.Name, sepPLUS, condition.doBuildUniqueKey(orig, obj))
+			if condition.isVerifiedBy(ent) {
+				result = concatSeparatedString(condition.Name, sepPLUS, condition.doBuildUniqueKey(ent, currentPathValue))
 
 				goto End
 			}
@@ -37,7 +38,7 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(orig, obj map[string]
 	// using the "use" if there's one
 	if len(thisParam.Use) > 0 {
 		for _, prop := range thisParam.Use {
-			result = concatSeparatedString(result, sepPLUS, thisParam.getStringValueFromObj(obj, prop))
+			result = concatSeparatedString(result, sepPLUS, thisParam.getStringValueFromObj(ent.values, prop))
 		}
 
 		if !thisParam.isWithinWhen() && result == "" {
@@ -50,24 +51,31 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(orig, obj map[string]
 
 	// else, "look"-ing for the complex case
 	for _, nextIdParam := range thisParam.Look {
-		// we're looking at our current object itself
-		if nextIdParam.At == currentPATH {
+		if nextIdParam.At == parentPATH { // we're looking back
+			// getting the origin of the current origin - we'll call it the "ancestor"
+			if ancestor := ent.parent; ancestor != nil {
+				result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(ancestor, currentPathValue))
+			} else {
+				panic(fmt.Sprintf("No parent found with '%s' from '%s' (param = %s). Current obj = %v", parentPATH, currentPathValue, thisParam.toString(), ent))
+			}
+
+		} else if nextIdParam.At == currentPATH { // we're looking at our current object itself
 			//
-			result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(orig, obj))
+			result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(ent, currentPathValue))
 			//
 		} else {
 			// if we're not using the current object at path ".", then let's go deeper
-			switch target, ok := obj[nextIdParam.At]; target.(type) {
+			switch target, ok := ent.values[nextIdParam.At]; target.(type) {
 
 			case map[string]interface{}:
 				// we're "descending" into an object here
-				result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(obj, target.(map[string]interface{})))
+				result = concatSeparatedString(result, sepPLUS, nextIdParam.doBuildUniqueKey(entityFrom(target, ent), currentPathValue))
 
 			case []map[string]interface{}:
 				// now, we're building a key from an array of objects, hurraaay
 				values := []string{}
 				for _, targetItem := range target.([]map[string]interface{}) {
-					key := nextIdParam.doBuildUniqueKey(obj, targetItem)
+					key := nextIdParam.doBuildUniqueKey(entityFrom(targetItem, ent), currentPathValue)
 					if key != "" || !nextIdParam.isWithinWhen() {
 						values = append(values, key)
 					}
@@ -100,12 +108,12 @@ End:
 
 	// handling the increment
 	if thisParam.Incr {
-		result = thisParam.incrKey(orig, obj, result)
+		result = thisParam.incrKey(ent.parent, result)
 	}
 
 	// building an alias for this object ?
-	if len(thisParam.getTpl()) > 0 {
-		thisParam.addAlias(obj)
+	if len(thisParam.getTpl1()) > 0 {
+		thisParam.addAlias1(ent.values, currentPathValue)
 	}
 
 	return
@@ -170,20 +178,18 @@ func concatSeparatedString(val1, sep, val2 string) string {
 	return val1 + sep + val2
 }
 
-const objINCREMENTS = "__increments__"
-
-func (thisParam *IdentificationParameter) incrKey(orig, obj map[string]interface{}, currentKey string) string {
+func (thisParam *IdentificationParameter) incrKey(objOwner *JsonEntity, currentKey string) string {
 	// we use a cache key that may use the param's name
 	cacheKey := concatSeparatedString(thisParam.Name, "&", currentKey)
 
 	// init if needed
-	if orig[objINCREMENTS] == nil {
-		orig[objINCREMENTS] = map[string]int{}
+	if objOwner.counts == nil {
+		objOwner.counts = map[string]int{}
 	}
 
 	// increment
-	orig[objINCREMENTS].(map[string]int)[cacheKey] = orig[objINCREMENTS].(map[string]int)[cacheKey] + 1
+	objOwner.counts[cacheKey] = objOwner.counts[cacheKey] + 1
 
 	// formating
-	return fmt.Sprintf("%s#%d", currentKey, orig[objINCREMENTS].(map[string]int)[cacheKey])
+	return fmt.Sprintf("%s#%d", currentKey, objOwner.counts[cacheKey])
 }

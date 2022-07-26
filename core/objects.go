@@ -12,7 +12,7 @@ import (
 
 // compareObjects : comparing 2 objects in general - they can be maps, slices, or simple types
 //nolint:cyclop,gocyclo,gocognit
-func compareObjects(orig1, orig2 map[string]interface{}, idParam *IdentificationParameter, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
+func compareObjects(root1, root2 *JsonEntity, idParam *IdentificationParameter, obj1, obj2 interface{}, options *ComparisonOptions, currentPathValue string) (Comparison, error) {
 	// considering the kind for the two objects to compare
 	obj1Kind := reflect.ValueOf(obj1).Kind()
 	obj2Kind := reflect.ValueOf(obj2).Kind()
@@ -23,14 +23,14 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 
 	if obj1Nil != obj2Nil {
 		if obj1Nil {
-			if alias := idParam.getAlias(obj2); alias != "" {
+			if alias := idParam.getAlias(obj2, currentPathValue); alias != "" {
 				return two(alias), nil
 			}
 
 			return two(obj2), nil
 		}
 
-		if alias := idParam.getAlias(obj1); alias != "" {
+		if alias := idParam.getAlias(obj1, currentPathValue); alias != "" {
 			return one(alias), nil
 		}
 
@@ -51,9 +51,9 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 			case reflect.String:
 				return compareSlicesOfStrings(idParam, obj1.([]string), []string{obj2.(string)}, options, currentPathValue)
 			case reflect.Map:
-				return compareSlicesOfMaps(orig1, orig2, idParam, obj1.([]map[string]interface{}), []map[string]interface{}{obj2.(map[string]interface{})}, options, currentPathValue)
+				return compareSlicesOfMaps(root1, root2, idParam, obj1.([]map[string]interface{}), []map[string]interface{}{obj2.(map[string]interface{})}, options, currentPathValue)
 			default:
-				return compareSlicesOfObjects(orig1, orig2, idParam, obj1.([]interface{}), []interface{}{obj2}, options, currentPathValue)
+				return compareSlicesOfObjects(root1, root2, idParam, obj1.([]interface{}), []interface{}{obj2}, options, currentPathValue)
 			}
 		}
 
@@ -62,9 +62,9 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 			case reflect.String:
 				return compareSlicesOfStrings(idParam, []string{obj1.(string)}, obj2.([]string), options, currentPathValue)
 			case reflect.Map:
-				return compareSlicesOfMaps(orig1, orig2, idParam, []map[string]interface{}{obj1.(map[string]interface{})}, obj2.([]map[string]interface{}), options, currentPathValue)
+				return compareSlicesOfMaps(root1, root2, idParam, []map[string]interface{}{obj1.(map[string]interface{})}, obj2.([]map[string]interface{}), options, currentPathValue)
 			default:
-				return compareSlicesOfObjects(orig1, orig2, idParam, []interface{}{obj1}, obj2.([]interface{}), options, currentPathValue)
+				return compareSlicesOfObjects(root1, root2, idParam, []interface{}{obj1}, obj2.([]interface{}), options, currentPathValue)
 			}
 		}
 
@@ -93,17 +93,18 @@ func compareObjects(orig1, orig2 map[string]interface{}, idParam *Identification
 	case reflect.Slice:
 		switch obj1.(type) {
 		case []interface{}:
-			return compareSlicesOfObjects(orig1, orig2, idParam, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
+			return compareSlicesOfObjects(root1, root2, idParam, obj1.([]interface{}), obj2.([]interface{}), options, currentPathValue)
+
 		case []map[string]interface{}:
 			if idParam == nil {
 				panic(fmt.Errorf("No id param at path '%s'. Currently compared slices of maps: \n\nslice 1:%v\n\nslice 2:%v", currentPathValue, obj1, obj2))
 			}
 
-			return compareSlicesOfMaps(orig1, orig2, idParam, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
+			return compareSlicesOfMaps(root1, root2, idParam, obj1.([]map[string]interface{}), obj2.([]map[string]interface{}), options, currentPathValue)
 		}
 
 	case reflect.Map:
-		return compareMaps(idParam, obj1.(map[string]interface{}), obj2.(map[string]interface{}), options, currentPathValue, false)
+		return compareJsonEntities(idParam, entityFrom(obj1, root1), entityFrom(obj2, root2), options, currentPathValue, false)
 
 	default:
 		// this should never happen

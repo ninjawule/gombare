@@ -4,7 +4,7 @@ package core
 // Here is the base for comparing stuff
 //------------------------------------------------------------------------------
 
-// yeah, let's make a recursive type... Why not ?
+// yeah, comparisons are just big maps, in the end...
 type Comparison map[string]interface{}
 
 func (comp Comparison) hasDiffs() bool {
@@ -16,15 +16,15 @@ func nodif() Comparison {
 }
 
 func one(obj interface{}) Comparison {
-	return map[string]interface{}{"_del_": obj}
+	return Comparison{"_del_": obj}
 }
 
 func two(obj interface{}) Comparison {
-	return map[string]interface{}{"_new_": obj}
+	return Comparison{"_new_": obj}
 }
 
 func one_two(obj1, obj2 interface{}) Comparison {
-	return map[string]interface{}{"_one_": obj1, "_two_": obj2}
+	return Comparison{"_one_": obj1, "_two_": obj2}
 }
 
 //------------------------------------------------------------------------------
