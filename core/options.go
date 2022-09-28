@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 //------------------------------------------------------------------------------
@@ -17,6 +18,8 @@ type ComparisonOptions struct {
 	silent      bool                     // if true, then no info / warning message is written out
 	stopAtFirst bool                     // if true, then, when comparing folders, we stop at the first couple of files that differ
 	logger      Logger                   // a logger
+	ignored     map[string]bool          // the ignored files
+	allowRaw    bool                     // if true, then it's allowed to display the raw JSON entities as difference, when added or removed; else, a display template is required
 }
 
 func (thisComp *ComparisonOptions) GetFileType() FileType {
@@ -35,7 +38,7 @@ func (thisComp *ComparisonOptions) GetIdParams() *IdentificationParameter {
 }
 
 // builds a new ComparisonOptions object
-func NewOptions(isXml bool, idParamsString string, fast bool, silent bool, stopAtFirst bool, check bool) *ComparisonOptions {
+func NewOptions(isXml bool, idParamsString string, fast bool, silent bool, ignoreString string, stopAtFirst bool, check bool, allowRaw bool) *ComparisonOptions {
 	fileType := FileTypeJSON
 	if isXml {
 		fileType = FileTypeXML
@@ -47,7 +50,19 @@ func NewOptions(isXml bool, idParamsString string, fast bool, silent bool, stopA
 		fast:        fast,
 		silent:      silent,
 		stopAtFirst: stopAtFirst,
+		ignored:     getIgnoredFiles(ignoreString),
+		allowRaw:    allowRaw,
 	}
+}
+
+func getIgnoredFiles(ignoreString string) map[string]bool {
+	result := map[string]bool{}
+
+	for _, ignored := range strings.Split(ignoreString, ",") {
+		result[ignored] = true
+	}
+
+	return result
 }
 
 func getIdParamsFromString(idParamsString string, check bool) *IdentificationParameter {

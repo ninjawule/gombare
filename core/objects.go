@@ -23,14 +23,14 @@ func compareObjects(root1, root2 *JsonEntity, idParam *IdentificationParameter, 
 
 	if obj1Nil != obj2Nil {
 		if obj1Nil {
-			if alias := idParam.getAlias(obj2, currentPathValue); alias != "" {
+			if alias := idParam.getAlias(obj2, currentPathValue, options); alias != "" {
 				return two(alias), nil
 			}
 
 			return two(obj2), nil
 		}
 
-		if alias := idParam.getAlias(obj1, currentPathValue); alias != "" {
+		if alias := idParam.getAlias(obj1, currentPathValue, options); alias != "" {
 			return one(alias), nil
 		}
 

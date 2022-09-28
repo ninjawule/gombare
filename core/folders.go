@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path"
+	"sort"
 	"time"
 )
 
@@ -22,8 +23,8 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 	thisComparison := Comparison{}
 
 	// listing the files within the 2 folders
-	filesOne, errList1 := listFilesToMap(pathOne)
-	filesTwo, errList2 := listFilesToMap(pathTwo)
+	_, filesSliceOne, errList1 := getFiles(pathOne, options)
+	filesMapTwo, filesSliceTwo, errList2 := getFiles(pathTwo, options)
 
 	if errList1 != nil {
 		return nil, errList1
@@ -37,15 +38,15 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 	checked := map[string]bool{}
 
 	// let's count the total number of different files in the union of the two folders
-	nbFiles := len(filesOne)
+	nbFiles := len(filesSliceOne)
 
 	// going through the files in the first folder, and comparing with the ones in the second folder
-	for fileName1 := range filesOne {
+	for _, fileName1 := range filesSliceOne {
 		// this file is being checked
 		checked[fileName1] = true
 
 		// does this file exist in the 2nd folder ?
-		if !filesTwo[fileName1] {
+		if !filesMapTwo[fileName1] {
 			// nope, fileName1 cannot be found in the 2nd folder
 			thisComparison[fileName1] = one_two(pathOne, "-")
 
@@ -83,7 +84,7 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 	}
 
 	// now let's iterate over the second folder, because there might be stuff not found in the first folder
-	for fileName2 := range filesTwo {
+	for _, fileName2 := range filesSliceTwo {
 		// we're considering files that have not been checked yet
 		if !checked[fileName2] {
 			// that's one more file
@@ -113,20 +114,27 @@ END:
 }
 
 // returns a directory's list of files as a map
-func listFilesToMap(path string) (map[string]bool, error) {
+func getFiles(path string, options *ComparisonOptions) (map[string]bool, []string, error) {
 	// we'll use the filenames as keys
-	result := map[string]bool{}
+	filesMap := map[string]bool{}
+	filesSlice := []string{}
 
 	// reading the current path
 	fileInfos, errRead := ioutil.ReadDir(path)
 	if errRead != nil {
-		return nil, fmt.Errorf("Error while listing files at path '%s'. Cause: %s", path, errRead)
+		return nil, nil, fmt.Errorf("Error while listing files at path '%s'. Cause: %s", path, errRead)
 	}
 
 	// let's list the files
 	for _, fileInfo := range fileInfos {
-		result[fileInfo.Name()] = true
+		if filename := fileInfo.Name(); !options.ignored[filename] {
+			filesMap[filename] = true
+			filesSlice = append(filesSlice, filename)
+		}
 	}
 
-	return result, nil
+	// let's sort the file names
+	sort.Strings(filesSlice)
+
+	return filesMap, filesSlice, nil
 }

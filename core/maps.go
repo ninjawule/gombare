@@ -87,7 +87,7 @@ func compareJsonEntities(idParam *IdentificationParameter, ent1, ent2 *JsonEntit
 		}
 	}
 
-	// getting all the keys in map 1, and sorting them
+	// getting all the keys in map 2, and sorting them
 	keys2 := []string{}
 	for key2 := range ent2.values {
 		keys2 = append(keys2, key2)

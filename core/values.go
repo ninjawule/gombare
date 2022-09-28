@@ -42,8 +42,8 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(ent *JsonEntity, curr
 		}
 
 		if !thisParam.isWithinWhen() && result == "" {
-			panic(fmt.Sprintf("This '_use' configuration: [%s] (at path: %s), did not allow us to build a non-empty ID key",
-				strings.Join(thisParam.Use, ", "), thisParam.toString()))
+			panic(fmt.Sprintf("This '_use' configuration: [%s] (at path: %s), did not allow us to build a non-empty ID key (path = %s)",
+				strings.Join(thisParam.Use, ", "), thisParam.toString(), currentPathValue))
 		}
 
 		goto End
@@ -93,15 +93,17 @@ func (thisParam *IdentificationParameter) doBuildUniqueKey(ent *JsonEntity, curr
 						result = concatSeparatedString(result, sepPLUS, "("+nextIdParam.At+")")
 					}
 				} else {
-					panic(fmt.Errorf("Cannot handle the OBJECT (of type: %T) at path '%s' (which is part of this id param: %v). Value = %v",
-						target, thisParam.At, thisParam.toString(), target))
+					panic(fmt.Errorf("Cannot handle the OBJECT (of type: %T) at path '%s' (which is part of this id param: %v) Full path: %s. Value = %v",
+						target, thisParam.At, thisParam.toString(), currentPathValue, target))
 				}
 			}
 		}
 	}
 
-	if !thisParam.isWithinWhen() && result == "" {
-		panic(fmt.Sprintf("The 'look' configuration at path: '%s' did not allow us to build a non-empty ID key", thisParam.toString()))
+	// no key built so far ? this is bad
+	if !thisParam.isWithinWhen() && !thisParam.Incr && result == "" {
+		panic(fmt.Sprintf("The 'look' / '_use' / 'when' configuration at path: '%s' did not allow us to build a non-empty ID key (path = %s). Object = %v",
+			thisParam.toString(), currentPathValue, ent.values))
 	}
 
 End:

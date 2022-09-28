@@ -11,9 +11,9 @@ import (
 
 func main() {
 	// reading the arguments
-	var one, two, idParamsString, outdir string
+	var one, two, idParamsString, outdir, ignoreString string
 
-	var xml, fast, silent, stopAtFirst, check bool
+	var xml, fast, silent, stopAtFirst, check, allowRaw bool
 
 	flag.StringVar(&one, "one", "",
 		"required: the path to the first file to compare; must be a JSON file, or XML with the -xml option")
@@ -33,6 +33,10 @@ func main() {
 		"if true, then, when comparing folders, we stop at the first couple of files that differ")
 	flag.BoolVar(&check, "check", false,
 		"if true, then the ID params are output to allow for some checks")
+	flag.StringVar(&ignoreString, "ignore", "",
+		"the files to ignores, separated by a comma")
+	flag.BoolVar(&allowRaw, "allowRaw", false,
+		"if true, then it's allowed to display the raw JSON entities as difference, when added or removed; else, a display template is required")
 
 	flag.Parse()
 
@@ -43,7 +47,7 @@ func main() {
 	}
 
 	// the comparison options
-	options := c.NewOptions(xml, idParamsString, fast, silent, stopAtFirst, check).SetDefaultLogger()
+	options := c.NewOptions(xml, idParamsString, fast, silent, ignoreString, stopAtFirst, check, allowRaw).SetDefaultLogger()
 
 	// are we just performing a check ?
 	if check {

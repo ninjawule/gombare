@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"runtime/debug"
 	"sort"
 	"strings"
 )
@@ -69,7 +70,7 @@ func (thisParam *IdentificationParameter) addAlias1(obj map[string]interface{}, 
 
 	var bytes bytes.Buffer
 	if errRender := thisParam.buildTpl1.Execute(&bytes, obj); errRender != nil {
-		panic(fmt.Sprintf("Failed to apply template '%s' on object (at path: %s): %v. Cause: %s", thisParam.getTpl1String(), currentPathValue, obj, errRender))
+		panic(fmt.Sprintf("\n\nFailed to apply template '%s'\n\non object (at path: %s): %v.\n\nCause: %s", thisParam.getTpl1String(), currentPathValue, obj, errRender))
 	}
 
 	obj[objALIAS] = bytes.String()
@@ -95,14 +96,14 @@ func (thisParam *IdentificationParameter) addAliasN(objects []map[string]interfa
 	for _, obj := range objects {
 		var bytes bytes.Buffer
 		if errRender := thisParam.buildTplN.Execute(&bytes, obj); errRender != nil {
-			panic(fmt.Sprintf("Failed to apply template '%s' on object (at path: %s): %v. Cause: %s", thisParam.getTplNString(), currentPathValue, obj, errRender))
+			panic(fmt.Sprintf("\n\nFailed to apply template '%s'\n\non object (at path: %s): %v.\n\nCause: %s", thisParam.getTplNString(), currentPathValue, obj, errRender))
 		}
 
 		obj[objALIAS] = bytes.String()
 	}
 }
 
-func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathValue string) string {
+func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathValue string, options *ComparisonOptions) string {
 	// we may already have an alias
 	switch obj := obj.(type) {
 	case map[string]interface{}:
@@ -112,10 +113,14 @@ func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathV
 		}
 
 		// or... we haven't had the occasion to build it yet - so we build it and return it right away
-		if thisParam != nil && len(thisParam.getTpl1()) > 0 {
-			thisParam.addAlias1(obj, currentPathValue)
+		if thisParam != nil {
+			if len(thisParam.getTpl1()) > 0 {
+				thisParam.addAlias1(obj, currentPathValue)
 
-			return obj[objALIAS].(string)
+				return obj[objALIAS].(string)
+			} else if !options.allowRaw {
+				panic(fmt.Sprintf("No template configure to display an object at path: '%s'. This object: %v", currentPathValue, obj))
+			}
 		}
 
 	case []map[string]interface{}:
@@ -130,15 +135,39 @@ func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathV
 		}
 
 		// or... we haven't had the occasion to build it yet - so we build it and return it right away
-		if thisParam != nil && len(thisParam.getTplN()) > 0 {
-			thisParam.addAliasN(obj, currentPathValue)
+		if thisParam != nil {
+			if len(thisParam.getTplN()) > 0 {
+				thisParam.addAliasN(obj, currentPathValue)
 
-			return thisParam.getAlias(obj, currentPathValue)
+				return thisParam.getAlias(obj, currentPathValue, options)
+			} else if !options.allowRaw {
+				panic(fmt.Sprintf("No template configure to display an object at path: '%s'. This object: %v", currentPathValue, obj))
+			}
 		}
+
+	case []interface{}:
+		// we do something here if somehow there's an issue to detect the '[]map[string]interface{}' type
+		if newMap, isMap := toMap(obj); isMap {
+			return thisParam.getAlias(newMap, currentPathValue, options)
+		}
+
+		return ""
 	}
 
 	// no alias : we're going to use the object itself to display it
 	return ""
+}
+
+func toMap(obj []interface{}) ([]map[string]interface{}, bool) {
+	if _, ok := obj[0].(map[string]interface{}); ok {
+		objMap := make([]map[string]interface{}, len(obj))
+		for i, item := range obj {
+			objMap[i] = item.(map[string]interface{})
+		}
+		return objMap, true
+	}
+
+	return nil, false
 }
 
 func display(arg interface{}, path string, keys ...string) (result string) {
@@ -155,7 +184,7 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 		return fmt.Sprintf("[no keys; using default display here] %v", arg)
 	}
 
-	// we've already crossed the whole to find the targeted objects
+	// we've already crossed the whole to find the targeted objects => we're dealing with the keys now
 	if pathIndex == len(paths) {
 		switch arg := arg.(type) {
 		case map[string]interface{}:
@@ -165,14 +194,37 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 				switch strings.TrimSpace(key) {
 				case "":
 					value = value + " "
-				case ":", "=", ".":
+				case ":", "=", ".", "[", "]", "(", ")", "{", "}", "-":
 					value = value + key
 				default:
-					obj, ok := arg[key].(map[string]interface{})
-					if val, hasText := obj["#text"]; ok && hasText {
-						value = fmt.Sprintf("%s%v", value, val)
+					// the key is just a label here
+					if key[0] == '\'' {
+						value = fmt.Sprintf("%s%s", value, key[1:len(key)-1])
 					} else {
-						value = fmt.Sprintf("%s%v", value, arg[key])
+						// a key can have a "path1.path2.etc.property" form, to refer to an indirect property
+						currentObj := arg
+						keys := strings.Split(key, ".")
+						last := len(keys) - 1
+						for i, subKey := range keys {
+							if i < last {
+								if newObj, ok := currentObj[subKey].(map[string]interface{}); ok {
+									currentObj = newObj
+								} else {
+									panic(fmt.Sprintf("sub-key '%s' does not refer to a JSON entity (map[string]interface{}) on object: %v", subKey, currentObj))
+								}
+							} else {
+								obj, ok := currentObj[subKey].(map[string]interface{})
+								if val, hasText := obj["#text"]; ok && hasText {
+									value = fmt.Sprintf("%s%v", value, val)
+								} else {
+									if target, ok := currentObj[subKey]; ok {
+										value = fmt.Sprintf("%s%v", value, target)
+									} else {
+										value = fmt.Sprintf("%s(%s)", value, key)
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -189,12 +241,18 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 
 			return strings.Join(values, " | ")
 
+		case []interface{}:
+			// we have to force the type "[]interface{}" into "map[string]interface{}" here
+			newMap, _ := toMap(arg)
+			return displayObj(newMap, paths, pathIndex, keys...)
+
 		default:
-			return fmt.Sprintf("[unhandled case; using default display here] %v", arg)
+			panic(fmt.Sprintf("[unhandled case (keys); using default display here] %v (%T).\n\nPaths: %v, index: %d.\n\nStack: %s",
+				arg, arg, paths, pathIndex, string(debug.Stack())))
 		}
 	}
 
-	// else, we've yet to ge deeper into the data
+	// else, we've yet to ge deeper into the data ==> we're going down the paths here
 	switch arg := arg.(type) {
 	case map[string]interface{}:
 		return displayObj(arg[paths[pathIndex]], paths, pathIndex+1, keys...)
@@ -210,8 +268,13 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 
 		return strings.Join(values, " | ")
 
+	case []interface{}:
+		newMap, _ := toMap(arg)
+		return displayObj(newMap, paths, pathIndex, keys...)
+
 	default:
-		return fmt.Sprintf("[unhandled case; using default display here] %v", arg)
+		panic(fmt.Sprintf("[unhandled case (path); using default display here] %v (%T).\n\nPaths: %v, index: %d.\n\nStack: %s",
+			arg, arg, paths, pathIndex, string(debug.Stack())))
 	}
 }
 

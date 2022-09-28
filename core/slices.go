@@ -20,20 +20,15 @@ func compareSlicesOfObjects(root1, root2 *JsonEntity, idParam *IdentificationPar
 	// one is empty and not this other ?
 	if slice1Empty != slice2Empty {
 		if slice1Empty {
-			return two(slice2), nil
+			return compareObjects(root1, root2, idParam, nil, slice2, options, currentPathValue)
 		}
 
-		return one(slice1), nil
+		return compareObjects(root1, root2, idParam, slice1, nil, options, currentPathValue)
 	}
 
 	// both are empty ?
 	if slice1Empty {
 		return nodif(), nil
-	}
-
-	// should we clear the identical elements before performing a comparison on the diverging elements only ?
-	if !idParam.Keep {
-		slice1, slice2 = clearObjectsSiblings(slice1, slice2, options, currentPathValue)
 	}
 
 	// both are non empty, we can consider their 1st element
@@ -44,6 +39,21 @@ func compareSlicesOfObjects(root1, root2 *JsonEntity, idParam *IdentificationPar
 	if slice1Kind != slice2Kind {
 		return nil, fmt.Errorf("Issue at path '%s' : type '[]%s' in the first file VS type '[]%s' in the second file.\n\n%v\n\nVS\n\n%v",
 			idParam.toString(), slice1Kind, slice2Kind, slice1, slice2)
+	}
+
+	// handling errors
+	if slice1Kind != reflect.String && slice1Kind != reflect.Float64 && idParam == nil {
+		panic(fmt.Sprintf("ID param is nil at path: %s", currentPathValue))
+	}
+
+	// should we clear the identical elements before performing a comparison on the diverging elements only ?
+	if idParam != nil && !idParam.Keep {
+		slice1, slice2 = clearObjectsSiblings(slice1, slice2, options, currentPathValue)
+
+		// we'll use the code lines above
+		if len(slice1) == 0 || len(slice2) == 0 {
+			return compareSlicesOfObjects(root1, root2, idParam, slice1, slice2, options, currentPathValue)
+		}
 	}
 
 	// transforming the slices to maps, to allow for map comparison
@@ -213,10 +223,10 @@ func compareSlicesOfMaps(root1, root2 *JsonEntity, idParam *IdentificationParame
 	// one is empty and not this other ?
 	if slice1Empty != slice2Empty {
 		if slice1Empty {
-			return two(slice2), nil
+			return compareObjects(root1, root2, idParam, nil, slice2, options, currentPathValue)
 		}
 
-		return one(slice1), nil
+		return compareObjects(root1, root2, idParam, slice1, nil, options, currentPathValue)
 	}
 
 	// both are empty ?
@@ -224,9 +234,19 @@ func compareSlicesOfMaps(root1, root2 *JsonEntity, idParam *IdentificationParame
 		return nodif(), nil
 	}
 
+	// handling errors
+	if idParam == nil {
+		panic(fmt.Sprintf("Nil ID param at path: %s", currentPathValue))
+	}
+
 	// should we clear the identical elements before performing a comparison on the diverging elements only ?
 	if !idParam.Keep {
 		slice1, slice2 = clearMapsSiblings(slice1, slice2, options, currentPathValue)
+
+		// we'll use the code lines above
+		if len(slice1) == 0 || len(slice2) == 0 {
+			return compareSlicesOfMaps(root1, root2, idParam, slice1, slice2, options, currentPathValue)
+		}
 	}
 
 	// mapping all the maps
