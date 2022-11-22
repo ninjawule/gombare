@@ -13,7 +13,7 @@ import (
 func CompareFiles(filepathOne, filepathTwo string, options *ComparisonOptions, doLog bool) (Comparison, error) {
 	// reading the files
 	if doLog {
-		options.logger.Info("Reading the first file")
+		options.Logger.Info("Reading the first file")
 	}
 
 	oneBytes, errOne := os.ReadFile(filepathOne)
@@ -22,7 +22,7 @@ func CompareFiles(filepathOne, filepathTwo string, options *ComparisonOptions, d
 	}
 
 	if doLog {
-		options.logger.Info("Reading the second file")
+		options.Logger.Info("Reading the second file")
 	}
 
 	twoBytes, errTwo := os.ReadFile(filepathTwo)
@@ -32,7 +32,7 @@ func CompareFiles(filepathOne, filepathTwo string, options *ComparisonOptions, d
 
 	// doing the comparison
 	if doLog {
-		options.logger.Info("Done reading the two files")
+		options.Logger.Info("Done reading the two files")
 	}
 
 	return compareBytes(oneBytes, twoBytes, options, doLog)

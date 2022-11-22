@@ -118,7 +118,7 @@ func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathV
 				thisParam.addAlias1(obj, currentPathValue)
 
 				return obj[objALIAS].(string)
-			} else if !options.allowRaw {
+			} else if !options.AllowRaw {
 				panic(fmt.Sprintf("No template configure to display an object at path: '%s'. This object: %v", currentPathValue, obj))
 			}
 		}
@@ -140,7 +140,7 @@ func (thisParam *IdentificationParameter) getAlias(obj interface{}, currentPathV
 				thisParam.addAliasN(obj, currentPathValue)
 
 				return thisParam.getAlias(obj, currentPathValue, options)
-			} else if !options.allowRaw {
+			} else if !options.AllowRaw {
 				panic(fmt.Sprintf("No template configure to display an object at path: '%s'. This object: %v", currentPathValue, obj))
 			}
 		}
@@ -162,8 +162,10 @@ func toMap(obj []interface{}) ([]map[string]interface{}, bool) {
 	if _, ok := obj[0].(map[string]interface{}); ok {
 		objMap := make([]map[string]interface{}, len(obj))
 		for i, item := range obj {
+			//nolint:errcheck
 			objMap[i] = item.(map[string]interface{})
 		}
+
 		return objMap, true
 	}
 
@@ -178,7 +180,7 @@ func display(arg interface{}, path string, keys ...string) (result string) {
 	return displayObj(arg, strings.Split(path, "."), 0, keys...)
 }
 
-//nolint:cyclop,gocyclo
+//nolint:cyclop,gocyclo,gocognit
 func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) string {
 	if len(keys) == 0 {
 		return fmt.Sprintf("[no keys; using default display here] %v", arg)
@@ -203,9 +205,9 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 					} else {
 						// a key can have a "path1.path2.etc.property" form, to refer to an indirect property
 						currentObj := arg
-						keys := strings.Split(key, ".")
-						last := len(keys) - 1
-						for i, subKey := range keys {
+						localKeys := strings.Split(key, ".")
+						last := len(localKeys) - 1
+						for i, subKey := range localKeys {
 							if i < last {
 								if newObj, ok := currentObj[subKey].(map[string]interface{}); ok {
 									currentObj = newObj
@@ -244,6 +246,7 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 		case []interface{}:
 			// we have to force the type "[]interface{}" into "map[string]interface{}" here
 			newMap, _ := toMap(arg)
+
 			return displayObj(newMap, paths, pathIndex, keys...)
 
 		default:
@@ -270,6 +273,7 @@ func displayObj(arg interface{}, paths []string, pathIndex int, keys ...string) 
 
 	case []interface{}:
 		newMap, _ := toMap(arg)
+
 		return displayObj(newMap, paths, pathIndex, keys...)
 
 	default:

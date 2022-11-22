@@ -12,68 +12,72 @@ import (
 //------------------------------------------------------------------------------
 
 type ComparisonOptions struct {
-	fileType    FileType                 // the type of the files we're comparing
-	idParams    *IdentificationParameter // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
-	fast        bool                     // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
-	silent      bool                     // if true, then no info / warning message is written out
-	stopAtFirst bool                     // if true, then, when comparing folders, we stop at the first couple of files that differ
-	logger      Logger                   // a logger
-	ignored     map[string]bool          // the ignored files
-	allowRaw    bool                     // if true, then it's allowed to display the raw JSON entities as difference, when added or removed; else, a display template is required
+	FileType       FileType                 // the type of the files we're comparing
+	IdParamsString string                   // a JSON representation of a IdentificationParameter parameter; can be the path to an existing JSON file
+	IdParams       *IdentificationParameter // the properties (values of the map) serving as unique IDs for given paths (keys of the map)
+	Check          bool                     // if true, then the ID params are output to allow for some checks
+	Fast           bool                     // if true, then, in an array, an object's index is used as its IDProp, if none is specified for its path in the data tree; i.e. the IDProp `#index` is used, instead of nothing
+	Silent         bool                     // if true, then no info / warning message is written out
+	StopAtFirst    bool                     // if true, then, when comparing folders, we stop at the first couple of files that differ
+	Logger         Logger                   // a logger
+	IgnoredString  string                   // the files to ignore, separated by a comma
+	Ignored        map[string]bool          // the ignored files
+	AllowRaw       bool                     // if true, then it's allowed to display the raw JSON entities as difference, when added or removed; else, a display template is required
+	IsXml          bool                     // if true, then the compared files are XML files
+	NParallel      int                      // the number of routines used at the same time when comparing several files at once (i.e. comparing folders)
 }
 
 func (thisComp *ComparisonOptions) GetFileType() FileType {
-	return thisComp.fileType
+	return thisComp.FileType
 }
 
-func (thisComp *ComparisonOptions) SetLogger(logger Logger) {
+func (thisComp *ComparisonOptions) SetLogger(logger Logger) *ComparisonOptions {
 	// not allowing the logger to be changed
-	if thisComp.logger == nil {
-		thisComp.logger = logger
+	if thisComp.Logger == nil {
+		thisComp.Logger = logger
 	}
+
+	return thisComp
 }
 
 func (thisComp *ComparisonOptions) GetIdParams() *IdentificationParameter {
-	return thisComp.idParams
+	return thisComp.IdParams
 }
 
-// builds a new ComparisonOptions object
-func NewOptions(isXml bool, idParamsString string, fast bool, silent bool, ignoreString string, stopAtFirst bool, check bool, allowRaw bool) *ComparisonOptions {
-	fileType := FileTypeJSON
-	if isXml {
-		fileType = FileTypeXML
-	}
+// Resolve allows to transform some of the options, so as to make them usable by the comparison functions
+func (thisComp *ComparisonOptions) Resolve() {
+	thisComp.IdParams = thisComp.getIdParamsFromString()
+	thisComp.Ignored = thisComp.getIgnoredFiles()
+	thisComp.FileType = FileTypeJSON
 
-	return &ComparisonOptions{
-		fileType:    fileType,
-		idParams:    getIdParamsFromString(idParamsString, check),
-		fast:        fast,
-		silent:      silent,
-		stopAtFirst: stopAtFirst,
-		ignored:     getIgnoredFiles(ignoreString),
-		allowRaw:    allowRaw,
+	if thisComp.IsXml {
+		thisComp.FileType = FileTypeXML
 	}
 }
 
-func getIgnoredFiles(ignoreString string) map[string]bool {
+func (thisComp *ComparisonOptions) getIgnoredFiles() map[string]bool {
 	result := map[string]bool{}
 
-	for _, ignored := range strings.Split(ignoreString, ",") {
+	for _, ignored := range strings.Split(thisComp.IgnoredString, ",") {
 		result[ignored] = true
 	}
 
 	return result
 }
 
-func getIdParamsFromString(idParamsString string, check bool) *IdentificationParameter {
+func (thisComp *ComparisonOptions) getIdParamsFromString() *IdentificationParameter {
+	if thisComp.IdParamsString == "" {
+		panic("no ID params!")
+	}
+
 	// at first, we suppose the whole JSON string has been provided
-	idParamsJsonString := idParamsString
+	idParamsJsonString := thisComp.IdParamsString
 
 	// but what if it's the path to an existing file ?
-	if _, errExist := os.Stat(idParamsString); errExist == nil {
-		fileBytes, errRead := os.ReadFile(idParamsString)
+	if _, errExist := os.Stat(thisComp.IdParamsString); errExist == nil {
+		fileBytes, errRead := os.ReadFile(thisComp.IdParamsString)
 		if errRead != nil {
-			panic(fmt.Sprintf("Error while readling config file (%s). Cause: %s", idParamsString, errRead))
+			panic(fmt.Sprintf("error while readling config file (%s). Cause: %s", thisComp.IdParamsString, errRead))
 		}
 
 		idParamsJsonString = string(fileBytes)
@@ -82,11 +86,11 @@ func getIdParamsFromString(idParamsString string, check bool) *IdentificationPar
 	param := &IdentificationParameter{}
 
 	if err := json.Unmarshal([]byte(idParamsJsonString), param); err != nil {
-		panic(fmt.Errorf("-idparams 2: Not a valid JSON (%s)", err))
+		panic(fmt.Errorf("not a valid JSON (%s)", err))
 	}
 
-	if err := param.Resolve(check); err != nil {
-		panic(fmt.Errorf("Not a valid ID parameter: %s", err))
+	if err := param.Resolve(thisComp.Check); err != nil {
+		panic(fmt.Errorf("not a valid ID parameter: %s", err))
 	}
 
 	return param

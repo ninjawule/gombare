@@ -11,47 +11,51 @@ import (
 
 func main() {
 	// reading the arguments
-	var one, two, idParamsString, outdir, ignoreString string
+	var one, two string
 
-	var xml, fast, silent, stopAtFirst, check, allowRaw bool
+	// gathering the desired options
+	opt := &c.ComparisonOptions{}
 
 	flag.StringVar(&one, "one", "",
 		"required: the path to the first file to compare; must be a JSON file, or XML with the -xml option")
 	flag.StringVar(&two, "two", "",
 		"required: the path to the second file to compare; must be of the same first file's type")
-	flag.BoolVar(&xml, "xml", false,
+	flag.BoolVar(&opt.IsXml, "xml", false,
 		"use this option if the files are XML files")
-	flag.StringVar(&idParamsString, "idparams", "",
+	flag.StringVar(&opt.IdParamsString, "idparams", "",
 		"a JSON representation of a IdentificationParameter parameter; see the docs for an example; can be the path to an existing JSON file")
-	flag.StringVar(&outdir, "outdir", "",
-		"when specified, the result is written out as a JSON into this specified output directory")
-	flag.BoolVar(&fast, "fast", false,
+	// flag.StringVar(&opt.Outdir, "outdir", "",
+	// 	"when specified, the result is written out as a JSON into this specified output directory")
+	flag.BoolVar(&opt.Fast, "fast", false,
 		"if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user; WARNING: this can lead to missing some differences!")
-	flag.BoolVar(&silent, "silent", false,
+	flag.BoolVar(&opt.Silent, "silent", false,
 		"if true, then no info / warning message is written out")
-	flag.BoolVar(&stopAtFirst, "stopAtFirst", false,
+	flag.BoolVar(&opt.StopAtFirst, "stopAtFirst", false,
 		"if true, then, when comparing folders, we stop at the first couple of files that differ")
-	flag.BoolVar(&check, "check", false,
+	flag.BoolVar(&opt.Check, "check", false,
 		"if true, then the ID params are output to allow for some checks")
-	flag.StringVar(&ignoreString, "ignore", "",
-		"the files to ignores, separated by a comma")
-	flag.BoolVar(&allowRaw, "allowRaw", false,
+	flag.StringVar(&opt.IgnoredString, "ignore", "",
+		"the files to ignore, separated by a comma")
+	flag.BoolVar(&opt.AllowRaw, "allowRaw", false,
 		"if true, then it's allowed to display the raw JSON entities as difference, when added or removed; else, a display template is required")
+	//nolint:revive,gomnd
+	flag.IntVar(&opt.NParallel, "nparallel", 10,
+		"the number of routines used at the same time when comparing several files at once (i.e. comparing folders)")
 
 	flag.Parse()
 
-	// controlling their presence
+	// controlling the presence of 2 things to compare
 	if one == "" || two == "" {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	// the comparison options
-	options := c.NewOptions(xml, idParamsString, fast, silent, ignoreString, stopAtFirst, check, allowRaw).SetDefaultLogger()
+	// let's set a logger, and "finalize" the options
+	opt.SetDefaultLogger().Resolve()
 
 	// are we just performing a check ?
-	if check {
-		doJsonOutput(options.GetIdParams(), "the ID params")
+	if opt.Check {
+		doJsonOutput(opt.GetIdParams(), "the ID params")
 
 		return // we're out
 	}
@@ -73,9 +77,9 @@ func main() {
 
 	// comparing 2 files, or 2 folders
 	if !oneDir {
-		comparison, errComp = c.CompareFiles(one, two, options, true)
+		comparison, errComp = c.CompareFiles(one, two, opt, true)
 	} else {
-		comparison, errComp = c.CompareFolders(one, two, options)
+		comparison, errComp = c.CompareFolders(one, two, opt)
 	}
 
 	if errComp != nil {
@@ -98,7 +102,6 @@ func isDirectory(path string) bool {
 
 // outputting an object
 func doJsonOutput(object interface{}, what string) {
-
 	// JSON-marshaling it
 	objectBytes, errMarsh := json.MarshalIndent(object, "", "	")
 	if errMarsh != nil {

@@ -18,7 +18,7 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 	if options.GetFileType() == FileTypeXML {
 		// handling the XML unmarshalling
 		if doLog {
-			options.logger.Info("Unmarshalling the first file")
+			options.Logger.Info("Unmarshalling the first file")
 		}
 
 		map1, err1 := xml2map.NewDecoder(bytes.NewReader(bytes1)).Decode()
@@ -27,7 +27,7 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 		}
 
 		if doLog {
-			options.logger.Info("Unmarshalling the second file")
+			options.Logger.Info("Unmarshalling the second file")
 		}
 
 		map2, err2 := xml2map.NewDecoder(bytes.NewReader(bytes2)).Decode()
@@ -36,18 +36,18 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 		}
 
 		if doLog {
-			options.logger.Info("Done unmarshalling the two files")
+			options.Logger.Info("Done unmarshalling the two files")
 		}
 
 		// using the right comparison function, between 2 objects in general
-		return compareJsonEntities(options.idParams, entity(map1), entity(map2), options, "", false)
+		return compareJsonEntities(options.IdParams, entity(map1), entity(map2), options, "", false)
 	}
 
 	// handling the JSON unmarshalling
 	var obj1 interface{}
 
 	if doLog {
-		options.logger.Info("Unmarshalling the first file")
+		options.Logger.Info("Unmarshalling the first file")
 	}
 
 	if errUnmarsh1 := json.Unmarshal(bytes1, &obj1); errUnmarsh1 != nil {
@@ -57,7 +57,7 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 	var obj2 interface{}
 
 	if doLog {
-		options.logger.Info("Unmarshalling the second file")
+		options.Logger.Info("Unmarshalling the second file")
 	}
 
 	if errUnmarsh2 := json.Unmarshal(bytes2, &obj2); errUnmarsh2 != nil {
@@ -65,9 +65,9 @@ func compareBytes(bytes1, bytes2 []byte, options *ComparisonOptions, doLog bool)
 	}
 
 	if doLog {
-		options.logger.Info("Done unmarshalling the two files")
+		options.Logger.Info("Done unmarshalling the two files")
 	}
 
 	// using the right comparison function, between 2 objects in general
-	return compareObjects(nil, nil, options.idParams, obj1, obj2, options, "")
+	return compareObjects(nil, nil, options.IdParams, obj1, obj2, options, "")
 }

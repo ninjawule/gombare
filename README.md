@@ -16,16 +16,20 @@ But also works in Golang through the `/core` package here, to compare `interface
 ```sh
 -> % gombare -h
 Usage of gombare:
+  -allowRaw
+    	if true, then it's allowed to display the raw JSON entities as difference, when added or removed; else, a display template is required
   -check
     	if true, then the ID params are output to allow for some checks
   -fast
     	if true, then some verifications are not performed, like the uniqueness of IDs coming from the id props specified by the user; WARNING: this can lead to missing some differences!
   -idparams string
     	a JSON representation of a IdentificationParameter parameter; see the docs for an example; can be the path to an existing JSON file
+  -ignore string
+    	the files to ignore, separated by a comma
+  -nparallel int
+    	the number of routines used at the same time when comparing several files at once (i.e. comparing folders) (default 10)
   -one string
     	required: the path to the first file to compare; must be a JSON file, or XML with the -xml option
-  -outdir string
-    	when specified, the result is written out as a JSON into this specified output directory
   -silent
     	if true, then no info / warning message is written out
   -stopAtFirst

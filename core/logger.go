@@ -1,9 +1,9 @@
 package core
 
 import (
-	"fmt"
 	"os"
 
+	//nolint:depguard
 	"github.com/sirupsen/logrus"
 	logrusf "github.com/x-cray/logrus-prefixed-formatter"
 )
@@ -36,7 +36,7 @@ func (thisComp *ComparisonOptions) SetDefaultLogger() *ComparisonOptions {
 	formatter.ForceColors = true
 	formatter.DisableColors = false
 
-	thisComp.logger = &defaultLogger{innerLogger: &logrus.Logger{
+	thisComp.Logger = &defaultLogger{innerLogger: &logrus.Logger{
 		Level:     logrus.DebugLevel,
 		Formatter: formatter,
 		Out:       os.Stderr,
@@ -59,8 +59,4 @@ func (thisLogger *defaultLogger) Debug(str string, params ...interface{}) {
 
 func (thisLogger *defaultLogger) Warn(str string, params ...interface{}) {
 	thisLogger.innerLogger.Warnf(str, params...)
-}
-
-func doLog(str string, params ...interface{}) {
-	println(fmt.Sprintf(str, params...))
 }
