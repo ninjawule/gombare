@@ -88,9 +88,9 @@ func CompareFolders(pathOne, pathTwo string, options *ComparisonOptions) (Compar
 					compFile1File2 = one_two(pathOne, "-")
 
 					// bit of logging
-					// if !options.Silent {
-					// 	options.Logger.Info("File '%s' only exists in dir one!", fileName1)
-					// }
+					if !options.Silent {
+						options.Logger.Info("File '%s' only exists in dir one!", fileName1)
+					}
 
 				} else {
 					// if !options.Silent {

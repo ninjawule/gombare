@@ -118,7 +118,9 @@ func sliceToMapOfObjects(file int, root *JsonEntity, idParam *IdentificationPara
 					// if it's a real duplicate, then we have to warn about it
 					if fmt.Sprintf("%v", ent.values[key]) == fmt.Sprintf("%v", object) {
 						// if reflect.DeepEqual(ent[key], object) {
-						options.Logger.Warn("There are 2 identical objects at path '%s' in file %d (with key '%s'): %v\n", currentPathValue, file, key, object)
+						if !options.Silent {
+							options.Logger.Warn("There are 2 identical objects at path '%s' in file %d (with key '%s'): %v\n", currentPathValue, file, key, object)
+						}
 					} else {
 						return nil, fmt.Errorf("Comparison of the 2 slices of OBJECTs has failed: there is more than 1 object with key '%s' at path '%s'"+
 							" in file %d (%s)\n\nmap1: %v\n\nmap2: %v", key, idParam.toString(), file, currentPathValue, ent.values[key], object)
@@ -175,7 +177,9 @@ func clearObjectsSiblings(slice1In, slice2In []interface{}, options *ComparisonO
 			littleSliceValues[key] = toIntObj(index) // the "image" is just a brute printout of the element
 			littleSliceKeptIndexes[index] = true     // at first, we suppose we'll keep every element of the little slice
 		} else { // we've detected a duplicate!
-			options.Logger.Warn("There are 2 identical maps at path '%s' in file %d: %s)\n", currentPathValue, usedSlice, key)
+			if !options.Silent {
+				options.Logger.Warn("There are 2 identical maps at path '%s' in file %d: %s)\n", currentPathValue, usedSlice, key)
+			}
 			littleSliceKeptIndexes[index] = false // we won't keep it
 		}
 	}
@@ -289,7 +293,9 @@ func sliceToMapOfMaps(file int, root *JsonEntity, idParam *IdentificationParamet
 				//nolint:revive
 				if fmt.Sprintf("%v", ent.values[key]) == fmt.Sprintf("%v", mapInSlice) {
 					// if reflect.DeepEqual(ent[key], mapInSlice) {
-					options.Logger.Warn("There are 2 identical maps at path '%s' in file %d (with key '%s'): %v\n", currentPathValue, file, key, mapInSlice)
+					if !options.Silent {
+						options.Logger.Warn("There are 2 identical maps at path '%s' in file %d (with key '%s'): %v\n", currentPathValue, file, key, mapInSlice)
+					}
 				} else {
 					return nil, fmt.Errorf("Comparison of the 2 slices of MAPs has failed: there is more than 1 MAP with key '%s' at path '%s'"+
 						" in file %d (%s)\n\nmap1: %v\n\nmap2: %v", key, idParam.toString(), file, currentPathValue, ent.values[key], mapInSlice)
@@ -324,7 +330,9 @@ func clearMapsSiblings(slice1In, slice2In []map[string]interface{}, options *Com
 			littleSliceValues[key] = toIntObj(index) // the "image" is just a brute printout of the element
 			littleSliceKeptIndexes[index] = true     // at first, we suppose we'll keep every element of the little slice
 		} else { // we've detected a duplicate!
-			options.Logger.Warn("There are 2 identical maps at path '%s' in file %d: %s)\n", currentPathValue, usedSlice, key)
+			if !options.Silent {
+				options.Logger.Warn("There are 2 identical maps at path '%s' in file %d: %s)\n", currentPathValue, usedSlice, key)
+			}
 			littleSliceKeptIndexes[index] = false // we won't keep it
 		}
 	}
